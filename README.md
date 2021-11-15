@@ -25,6 +25,7 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
   * https://learn.adafruit.com/adafruit-ltr390-uv-sensor
   * https://learn.adafruit.com/adafruit-ltr390-uv-sensor/python-circuitpython
   * 2x Qwiic Connectors
+  * I2C Address: 0x53
 
 ## Setting Up the Raspberry Pi
 ### Imaging the SD Card:
@@ -75,8 +76,10 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
       ````
 * Install the I2C command line utility programs if they aren't already installed
   * ```sudo apt-get-install -y i2c-tools```
-* Install the **smbus2** python library
+* Install the the following python libraries
   * ```pip3 install smbus2```
+  * ```pip3 install sparkfun-qwiic```
+  * ```pip3 install --upgrade sparkfun-qwiic-tca9548a```
 
 **Optional Steps**
 * Enable VNC Access
@@ -109,7 +112,26 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
     60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
     70: 70 -- -- -- -- -- -- --
     ````
-
+* Verify Python is setup properly to work with I2C Mux
+  * ````
+    pi@sensorhub:~/Downloads $ python i2c_test.py
+    Channel 0: Disabled
+    Channel 1: Disabled
+    Channel 2: Disabled
+    Channel 3: Disabled
+    Channel 4: Disabled
+    Channel 5: Disabled
+    Channel 6: Disabled
+    Channel 7: Disabled
+    Channel 0: Enabled
+    Channel 1: Disabled
+    Channel 2: Disabled
+    Channel 3: Disabled
+    Channel 4: Enabled
+    Channel 5: Disabled
+    Channel 6: Disabled
+    Channel 7: Enabled
+    ````
 
 [^1]: https://downloads.raspberrypi.org/raspios_armhf/images/
 [^2]: https://rufus.ie/en/
