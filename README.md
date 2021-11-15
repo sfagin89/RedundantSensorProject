@@ -227,6 +227,7 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
     Channel 5: Disabled
     Channel 6: Disabled
     Channel 7: Disabled
+    ````
 
 [^1]: https://downloads.raspberrypi.org/raspios_armhf/images/
 [^2]: https://rufus.ie/en/
