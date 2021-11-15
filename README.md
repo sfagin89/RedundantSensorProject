@@ -44,8 +44,10 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
   * Restarting the Pi after this change is recommended. Run this command if not prompted
     * ```sudo shutdown -r```
   * Check that the user-mode I2C interface is now available
-    * Running ```ls /dev/*i2c*```
-    * Should result in the response ```/dev/i2c-1```
+    * ````
+      pi@sensorhub:~ $ ls /dev/*i2c*
+      /dev/i2c-1
+      ````
 * Install the I2C command line utility programs if they aren't already installed
   * ```sudo apt-get-install -y i2c-tools```
 
@@ -67,7 +69,7 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
 
 ### Interacting with the I2C Devices connected to the Pi
 **The following steps assume a hardware setup identical to the provided schematic**
-* Confirm the I2C Mux peripheral is present on the bus
+* Confirm the I2C Mux peripheral is present on the bus. Address 70 show display
   * ````
     pi@sensorhub:~ $ i2cdetect -y 1
          0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
