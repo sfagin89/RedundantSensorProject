@@ -45,7 +45,7 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
   * Select Finish
 * Set Python3 as default
   * Open the .bashrc file
-    * ```nano ~/.bashrc```
+    * ```sudo nano ~/.bashrc```
   * Type the following on a new line at the end of the file
     * ```alias python=python3```
   * Save and exit the file
