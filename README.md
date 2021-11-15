@@ -97,7 +97,7 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
   * Run the following command to make the alias permanent
     * ```source ~/.bashrc```
 
-## Interacting with the I2C Devices connected to the Pi
+## Testing I2C Device Connections on Pi
 **The following steps assume a hardware setup identical to the provided schematic**
 * Confirm the I2C Mux peripheral is present on the bus. Address 70 show display
   * ````
@@ -112,26 +112,51 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
     60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
     70: 70 -- -- -- -- -- -- --
     ````
-* Verify Python is setup properly to work with I2C Mux
-  * ````
-    pi@sensorhub:~/Downloads $ python i2c_test.py
-    Channel 0: Disabled
-    Channel 1: Disabled
-    Channel 2: Disabled
-    Channel 3: Disabled
-    Channel 4: Disabled
-    Channel 5: Disabled
-    Channel 6: Disabled
-    Channel 7: Disabled
-    Channel 0: Enabled
-    Channel 1: Disabled
-    Channel 2: Disabled
-    Channel 3: Disabled
-    Channel 4: Enabled
-    Channel 5: Disabled
-    Channel 6: Disabled
-    Channel 7: Enabled
-    ````
+* Verify Python is setup properly to work with I2C Mux and that all sensors are seen on the bus
+  * Run the following enable and disable test scripts for each channel of the MUX a sensor is connected to.
+  * Addresses 40 (or 41) and 53 should be listed after each channel is enabled.
+    * ````
+      pi@sensorhub:~/Downloads $ python i2c_test_enable.py
+      Which Channel should be Enabled? (0-7): 0
+      Channel 0: Enabled
+      Channel 1: Disabled
+      Channel 2: Disabled
+      Channel 3: Disabled
+      Channel 4: Disabled
+      Channel 5: Disabled
+      Channel 6: Disabled
+      Channel 7: Disabled
+      pi@sensorhub:~/Downloads $ i2cdetect -y 1
+           0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+      00:          -- -- -- -- -- -- -- -- -- -- -- -- --
+      10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+      20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+      30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+      40: 40 -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+      50: -- -- -- 53 -- -- -- -- -- -- -- -- -- -- -- --
+      60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+      70: 70 -- -- -- -- -- -- --
+      pi@sensorhub:~/Downloads $ python i2c_test_disable.py
+      Channel 0: Disabled
+      Channel 1: Disabled
+      Channel 2: Disabled
+      Channel 3: Disabled
+      Channel 4: Disabled
+      Channel 5: Disabled
+      Channel 6: Disabled
+      Channel 7: Disabled
+      pi@sensorhub:~/Downloads $ i2cdetect -y 1
+           0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+      00:          -- -- -- -- -- -- -- -- -- -- -- -- --
+      10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+      20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+      30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+      40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+      50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+      60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+      70: 70 -- -- -- -- -- -- --
+      ````
+
 
 [^1]: https://downloads.raspberrypi.org/raspios_armhf/images/
 [^2]: https://rufus.ie/en/
