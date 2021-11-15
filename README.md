@@ -1,6 +1,31 @@
 # RedundantSensorProject
 Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
 
+## Hardware Setup
+### Parts List
+* 1x Raspberry Pi 4 Model B
+  * https://www.raspberrypi.com/products/raspberry-pi-4-model-b/
+* 1x SparkFun Qwiic SHIM for Raspberry Pi
+  * https://www.sparkfun.com/products/15794
+  * https://learn.sparkfun.com/tutorials/qwiic-shim-for-raspberry-pi-hookup-guide
+* 1x SparkFun Qwiic Mux Breakout - 8 Channel (TCA9548A)
+  * https://www.sparkfun.com/products/16784
+  * https://learn.sparkfun.com/tutorials/qwiic-mux-hookup-guide
+  * 10x Qwiic Connectors
+    * 2x Pass Through (Daisy Chain)
+    * 8x Channels
+  * I2C Address: 0x70 (default) up to 0x77
+  * https://cdn.sparkfun.com/assets/f/0/4/b/3/tca9548a.pdf
+* 3x Adafruit HTU31 Temperature & Humidity Sensor Breakout Board - STEMMA QT / Qwiic
+  * https://www.adafruit.com/product/4832
+  * 2x Qwiic Connectors
+  * I2C Address: 0x40 or 0x41
+* 3x Adafruit LTR390 UV Light Sensor - STEMMA QT / Qwiic
+  * https://www.adafruit.com/product/4831
+  * https://learn.adafruit.com/adafruit-ltr390-uv-sensor
+  * https://learn.adafruit.com/adafruit-ltr390-uv-sensor/python-circuitpython
+  * 2x Qwiic Connectors
+
 ## Setting Up the Raspberry Pi
 ### Imaging the SD Card:
 **IMPORTANT**: This Project uses the RPi OS "Buster", newer OS's have not been confirmed to work.
@@ -50,6 +75,8 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
       ````
 * Install the I2C command line utility programs if they aren't already installed
   * ```sudo apt-get-install -y i2c-tools```
+* Install the **smbus2** python library
+  * ```pip3 install smbus2```
 
 **Optional Steps**
 * Enable VNC Access
@@ -67,7 +94,7 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
   * Run the following command to make the alias permanent
     * ```source ~/.bashrc```
 
-### Interacting with the I2C Devices connected to the Pi
+## Interacting with the I2C Devices connected to the Pi
 **The following steps assume a hardware setup identical to the provided schematic**
 * Confirm the I2C Mux peripheral is present on the bus. Address 70 show display
   * ````
