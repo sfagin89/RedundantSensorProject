@@ -76,10 +76,12 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
       ````
 * Install the I2C command line utility programs if they aren't already installed
   * ```sudo apt-get-install -y i2c-tools```
-* Install the the following python libraries
+* Install the following python libraries
   * ```pip3 install smbus2```
   * ```pip3 install sparkfun-qwiic```
   * ```pip3 install --upgrade sparkfun-qwiic-tca9548a```
+  * ```pip3 install adafruit-circuitpython-ltr390```
+  * ```pip3 install adafruit-circuitpython-htu31d```
 
 **Optional Steps**
 * Enable VNC Access
@@ -156,7 +158,75 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
       60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
       70: 70 -- -- -- -- -- -- --
       ````
+* Verify UV Sensor is communicating properly over I2C connection for each MUX channel a sensor is connected to
+  * ````
+    pi@sensorhub:~/Downloads $ python i2c_test_enable.py
+    Which Channel should be Enabled? (0-7): 3
+    Channel 0: Disabled
+    Channel 1: Disabled
+    Channel 2: Disabled
+    Channel 3: Enabled
+    Channel 4: Disabled
+    Channel 5: Disabled
+    Channel 6: Disabled
+    Channel 7: Disabled
+    pi@sensorhub:~/Downloads $ python ltr390_test.py
+    UV: 0           Ambient Light: 401
+    UVI: 0.0                Lux: 320.8
+    UV: 0           Ambient Light: 401
+    UVI: 0.0                Lux: 320.8
+    UV: 0           Ambient Light: 401
+    UVI: 0.0                Lux: 320.8
+    UV: 0           Ambient Light: 401
+    UVI: 0.0                Lux: 320.8
+    UV: 0           Ambient Light: 401
+    UVI: 0.0                Lux: 320.8
+    UV: 0           Ambient Light: 401
+    UVI: 0.0                Lux: 320.8
+    <Ctrl+C to Exit>
+    pi@sensorhub:~/Downloads $ python i2c_test_disable.py
+    Channel 0: Disabled
+    Channel 1: Disabled
+    Channel 2: Disabled
+    Channel 3: Disabled
+    Channel 4: Disabled
+    Channel 5: Disabled
+    Channel 6: Disabled
+    Channel 7: Disabled
+    ````
+* Verify Temperature and Humidity Sensor is communicating properly over I2C connection for each MUX channel a sensor is connected to
+  * ````
+    pi@sensorhub:~/Downloads $ python i2c_test_enable.py
+    Which Channel should be Enabled? (0-7): 0
+    Channel 0: Enabled
+    Channel 1: Disabled
+    Channel 2: Disabled
+    Channel 3: Disabled
+    Channel 4: Disabled
+    Channel 5: Disabled
+    Channel 6: Disabled
+    Channel 7: Disabled
+    pi@sensorhub:~/Downloads $ python htu31_test.py
+    Heater is on? True
+    Heater is on? False
+    Temperature: 15.8 C
+    Humidity: 48.3 %
 
+    Temperature: 15.7 C
+    Humidity: 48.3 %
+
+    Temperature: 15.8 C
+    Humidity: 48.3 %
+    <Ctrl+C to Exit>
+    pi@sensorhub:~/Downloads $ python i2c_test_disable.py
+    Channel 0: Disabled
+    Channel 1: Disabled
+    Channel 2: Disabled
+    Channel 3: Disabled
+    Channel 4: Disabled
+    Channel 5: Disabled
+    Channel 6: Disabled
+    Channel 7: Disabled
 
 [^1]: https://downloads.raspberrypi.org/raspios_armhf/images/
 [^2]: https://rufus.ie/en/
