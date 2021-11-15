@@ -68,7 +68,7 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
 ### Interacting with the I2C Devices connected to the Pi
 **The following steps assume a hardware setup identical to the provided schematic**
 * Confirm the I2C Mux peripheral is present on the bus
-  * ```pi@sensorhub:~ $ i2cdetect -y 1
+  * ````pi@sensorhub:~ $ i2cdetect -y 1
      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
 00:          -- -- -- -- -- -- -- -- -- -- -- -- --
 10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
@@ -77,7 +77,7 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
 40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-70: 70 -- -- -- -- -- -- --```
+70: 70 -- -- -- -- -- -- --````
 
 
 [^1]: https://downloads.raspberrypi.org/raspios_armhf/images/
