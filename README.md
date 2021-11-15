@@ -35,6 +35,19 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
 * Install Updates
   * ```sudo apt-get update```
   * ```sudo apt-get dist-upgrade``` (This can take up to an hour)
+* Enable I2C peripheral
+  * Open the Raspbery Pi Config File
+    * ```sudo raspi-config```
+  * Navigate to Interface Options > I2C
+  * Select Yes to enable VNC Server
+  * Select Finish
+  * Restarting the Pi after this change is recommended. Run this command if not prompted
+    * ```sudo shutdown -r```
+  * Check that the user-mode I2C interface is now available
+    * Running ```ls /dev/*i2c*```
+    * Should result in the response ```/dev/i2c-1```
+* Install the I2C command line utility programs if they aren't already installed
+  * ```sudo apt-get-install -y i2c-tools```
 
 **Optional Steps**
 * Enable VNC Access
@@ -51,6 +64,8 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
   * Save and exit the file
   * Run the following command to make the alias permanent
     * ```source ~/.bashrc```
+
+### Interacting with the I2C Devices connected to the Pi
 
 [^1]: https://downloads.raspberrypi.org/raspios_armhf/images/
 [^2]: https://rufus.ie/en/
