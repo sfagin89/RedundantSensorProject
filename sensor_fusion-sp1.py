@@ -7,8 +7,6 @@
 ## for each reading to make a range of precision.
 # Passes the Precious Range Pairs to a function that performs Marzullo's
 ## Algorithm and prints out the resulting 'improved' precision result.
-# New Precision is now also printed (found by taking the difference between the
-## upper and lower bound of the new range and dividing in half)
 #
 # Functionality to Add:
 # Currently doesn't do anything for UV readings aside from output the sensor
@@ -53,8 +51,6 @@ def marzulloAlgorithm(intervals,N,t):
     else:
         print("[",l,", ",r,"]")
 
-    return l, r
-
 
 
 #temp_readings[] #+/- 0.2 deg C accuracy
@@ -68,7 +64,7 @@ test.enable_channels(0)
 i2c_0 = board.I2C()
 ltr = adafruit_ltr390.LTR390(i2c_0)
 htu = adafruit_htu31d.HTU31D(i2c_0)
-print("\nSensor Series 1 has the following readings: ")
+print("Sensor Series 1 has the following readings: ")
 print("UV:", ltr.uvs, "\t\tAmbient Light:", ltr.light)
 print("UVI:", ltr.uvi, "\t\tLux:", ltr.lux)
 temperature, relative_humidity = htu.measurements
@@ -86,7 +82,7 @@ test.enable_channels(3)
 i2c_3 = board.I2C()
 ltr = adafruit_ltr390.LTR390(i2c_3)
 htu = adafruit_htu31d.HTU31D(i2c_3)
-print("\nSensor Series 2 has the following readings: ")
+print("Sensor Series 2 has the following readings: ")
 print("UV:", ltr.uvs, "\t\tAmbient Light:", ltr.light)
 print("UVI:", ltr.uvi, "\t\tLux:", ltr.lux)
 temperature, relative_humidity = htu.measurements
@@ -104,7 +100,7 @@ test.enable_channels(7)
 i2c_7 = board.I2C()
 ltr = adafruit_ltr390.LTR390(i2c_7)
 htu = adafruit_htu31d.HTU31D(i2c_7)
-print("\nSensor Series 3 has the following readings: ")
+print("Sensor Series 3 has the following readings: ")
 print("UV:", ltr.uvs, "\t\tAmbient Light:", ltr.light)
 print("UVI:", ltr.uvi, "\t\tLux:", ltr.lux)
 temperature, relative_humidity = htu.measurements
@@ -118,7 +114,7 @@ print("Temperature: %0.1f C" % temperature)
 print("Humidity: %0.1f%%" % relative_humidity)
 test.disable_channels(7)
 
-print("\nApplying Marzullo's Algorithm returns the following results: ")
+print("Applying Marzullo's Algorithm returns the following results: ")
 #Returns the smallest interval consistent with largest number of sources
 
 #for n in temp_readings:
@@ -127,41 +123,11 @@ print("\nApplying Marzullo's Algorithm returns the following results: ")
 #for n in hum_readings:
 #    print("%0.1f%%" % n)
 
-#print('\n'.join([''.join(['{:4}'.format(item) for item in row])
-#      for row in temp_intervals]))
-
 N = len(temp_intervals)
-lowT, highT = marzulloAlgorithm(temp_intervals, N, 0)
-#print(type(low))
-#print(type(high))
-tempMA = (highT - lowT)/2
-print("Temperature Precision is now: +/- %0.1f C" % tempMA)
+marzulloAlgorithm(temp_intervals, N, 0)
 
 N = len(hum_intervals)
-lowH, highH = marzulloAlgorithm(hum_intervals, N, 1)
-#print(type(low))
-#print(type(high))
-humMA = (highH - lowH)/2
-print("Relative Humidity Precision is now: +/- %0.1f%%" % humMA)
-
-print("\n")
-
-if (lowT < 20.5):
-    print("Below Soft Range of Acceptable Temp, LED01 On")
-    if (lowT < 20):
-        print("Below Hard Range of Acceptable Temp, LED02 On")
-if (highT > 21.5):
-    print("Above Soft Range of Acceptable Temp, LED01 On")
-    if (highT > 22):
-        print("Above Hard Range of Acceptable Temp, LED02 On")
-if (lowH < 40.0):
-    print("Below Soft Range of Acceptable Relative Humidity, LED01 On")
-    if (lowH < 25.0):
-        print("Below Hard Range of Acceptable Relative Humidity, LED02 On")
-if (highH > 50.0):
-    print("Above Soft Range of Acceptable Relative Humidity, LED01 On")
-    if (highH > 65.0):
-        print("Above Hard Range of Acceptable Relative Humidity, LED02 On")
+marzulloAlgorithm(hum_intervals, N, 1)
 
 test.disable_all()
 
