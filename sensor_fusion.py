@@ -13,6 +13,19 @@
 # Functionality to Add:
 # Currently doesn't do anything for UV readings aside from output the sensor
 ## reading to the screen.
+# If humidity has an absolute change of greater than 10% per hour, does the LED
+## turn on to indicate fluctuation (Blinking Orange)
+# Does system maintain 1 week of data for record keeping? - Wk 2, save output
+## to CSV
+## Sensor data (specify what exactly to save) should be saved for previous 7
+## days (rolling/sliding) interab
+# Alert should be produced if current light exposure is greater than 200 lux
+# Alert should be produced if daily light exposure greater than 1000 lux hours
+# Alert should be produced when a sensor, or multiple sensors fail
+# Alert should be produced when a specific sensor remains down for
+## (X time or Y cycles)
+# Make sure Window Factor in UV sensor library is set correctly
+## (for use in a windowless room)
 #
 # Questions:
 # How often should readings be taken and should the 'loop' take place in this
