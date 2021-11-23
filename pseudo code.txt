@@ -1,0 +1,38 @@
+How the program should work:
+
+A log file is created with headers to hold sensor readings
+
+Every 60 seconds
+	The sensors are read
+	The data is passed through Marzullo's Algorithm
+		Data is passed to Marzullo as +/- intervals
+		Data is returned as a Median value
+	The resulting output is
+		Written to a log file
+			If any entry is over 7 days old, that entry is removed.
+			Either
+				Expired entries at top are removed, and new entries added to bottom, pushing old up
+				Expired entries at bottom are removed and new entries added to top, pushing old down
+		Compared against thresholds
+			Check if temp is out of range
+				Soft Range: 20.5 - 21.5 Degrees Celsius
+				Hard Range: 20 - 22 Degrees Celsius
+			Check if humidity is out of range
+				Soft Range: 40.0% - 50.0%
+				Hard Range: 25.0% - 65.0%
+			Check if humidity has changed move than 10% in 1 hour
+				...
+			Check if current lux is out of range
+				Limit: > 200 Lux
+			Check if cummulative lux (over 24 hour period) is out of range
+				Max: > 1000 Lux Hours
+					Either
+						Sum the last 24 hours of entries in the logs
+						Sum the values in an array hold 24 hours of entries
+
+Checking every 60 seconds means:
+	60 entries per hour
+	1,440 entries per day
+	10,080 entries per week
+
+For testing we can scale readings and thresholds to make problems visble quicker
