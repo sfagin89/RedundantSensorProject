@@ -195,7 +195,7 @@ try:
         lux_intervals = [[float(lux) - float(lux/10), float(lux) + float(lux/10)]]
 
         # Read Sensors from second channel and account for precision error
-        temperature, relative_humidity, lux = readSensors(4)
+        temperature, relative_humidity, lux = readSensors(3)
         temp_intervals.append([float(temperature) - 0.2, float(temperature) + 0.2])
         hum_intervals.append([float(relative_humidity) - 2, float(relative_humidity) + 2])
         #luxSet.append(lux)
