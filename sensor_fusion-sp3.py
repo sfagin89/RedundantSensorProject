@@ -18,8 +18,13 @@
 # Alert is produced if daily light exposure greater than 1000 lux hours
 # Debug Mode implemented: If debug set to 1, print states will execute to aid in
 ## debugging.
-# Alert is produced when a sensor, or multiple sensors fail
-# Alert is produced when a specific sensor remains down for 3 cycles
+#
+# Functionality to Add:
+# Alert should be produced when a sensor, or multiple sensors fail
+# Alert should be produced when a specific sensor remains down for
+## (X time or Y cycles)
+# Make sure Window Factor in UV sensor library is set correctly
+## (for use in a windowless room)
 #
 # Questions:
 # How often should readings be taken and should the 'loop' take place in this
@@ -133,31 +138,36 @@ def readSensors(chan):
     htu_status = 0
 
     try:
-        if debug == 1:
-            print("Checking LTR Sensor")
+        print("Checking LTR Sensor")
         ltr = adafruit_ltr390.LTR390(i2c)
         ltr_status = 1
+        print("About to check HTU Sensor")
+        try:
+            print("Checking HTU Sensor")
+            htu = adafruit_htu31d.HTU31D(i2c)
+            htu_status = 1
+        except ValueError as error2:
+            print(error2)
+            global htu_down
+            hut_down = htu_down + 1
+
     except ValueError as error1:
         print(error1)
+        print("first sensor down")
         global ltr_down
         ltr_down = ltr_down + 1
-        if debug == 1:
-            print("LTR Sensor Down")
+        print("continuing")
+        #print("About to check HTU Sensor")
+        #try:
+        #    print("Checking HTU Sensor")
+        #    htu = adafruit_htu31d.HTU31D(i2c)
+        #    htu_status = 1
+        #except ValueError as error2:
+        #    print(error2)
+        #    htu_down = htu_down + htu_status
 
-    try:
-        if debug == 1:
-            print("Checking HTU Sensor")
-        htu = adafruit_htu31d.HTU31D(i2c)
-        htu_status = 1
-    except ValueError as error2:
-        print(error2)
-        global htu_down
-        htu_down = htu_down + 1
-        if debug == 1:
-            print("HTU Sensor Down")
 
-    if debug == 1:
-        print("\nSensor Series has the following readings: ")
+    print("\nSensor Series has the following readings: ")
     if htu_status == 1:
         temperature, relative_humidity = htu.measurements
         if debug == 1:
@@ -308,13 +318,6 @@ try:
             if debug == 1:
                 print("Above Acceptable Level of Lux Hours within 24 hours, LED05 On")
 
-        if (ltr_down >= 3):
-            if debug == 1:
-                print("LTR Sensor Down 3 times, LED06 On")
-        if (htu_down >= 3):
-            if debug == 1:
-                print("HTU Sensor Down 3 times, LED07 On")
-
         # Disabling Channels to ensure fresh start in next loop
         test.disable_all()
 
@@ -333,5 +336,4 @@ try:
         # Setting to 5 caused log entries every 6 seconds instead of 5
         time.sleep(4)
 except KeyboardInterrupt:
-    print("\n")
     pass
