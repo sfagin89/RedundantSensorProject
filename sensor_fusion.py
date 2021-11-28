@@ -264,49 +264,49 @@ try:
         # Testing Marzullo Output against Thresholds to determine if alert is triggered
         if (lowT < 20.5):
             if debug == 1:
-                print("Below Soft Range of Acceptable Temp, LED01 On")
+                print("Below Soft Range of Acceptable Temp, LED02 On")
             if (lowT < 20):
                 if debug == 1:
-                    print("Below Hard Range of Acceptable Temp, LED02 On")
+                    print("Below Hard Range of Acceptable Temp, LED04 On")
         if (highT > 21.5):
             if debug == 1:
                 print("Above Soft Range of Acceptable Temp, LED01 On")
             if (highT > 22):
                 if debug == 1:
-                    print("Above Hard Range of Acceptable Temp, LED02 On")
+                    print("Above Hard Range of Acceptable Temp, LED03 On")
         if (lowH < 40.0):
             if debug == 1:
-                print("Below Soft Range of Acceptable Relative Humidity, LED01 On")
+                print("Below Soft Range of Acceptable Relative Humidity, LED06 On")
             if (lowH < 25.0):
                 if debug == 1:
-                    print("Below Hard Range of Acceptable Relative Humidity, LED02 On")
+                    print("Below Hard Range of Acceptable Relative Humidity, LED08 On")
         if (highH > 50.0):
             if debug == 1:
-                print("Above Soft Range of Acceptable Relative Humidity, LED01 On")
+                print("Above Soft Range of Acceptable Relative Humidity, LED05 On")
             if (highH > 65.0):
                 if debug == 1:
-                    print("Above Hard Range of Acceptable Relative Humidity, LED02 On")
+                    print("Above Hard Range of Acceptable Relative Humidity, LED07 On")
         # If hum_over_hour list still has None values
         if count < 60:
             for x in range(count):
                 if abs(hum_over_hour[x] - medianH) > 10:
                     if debug == 1:
-                        print("Relative Humidity has changed more than 10% within an hour, LED03 On")
+                        print("Relative Humidity has changed more than 10% within an hour, LED09 On")
                         break
         else: # Code has run for more than an hour so safe to compare all items in list
             for x in hum_over_hour:
                 if abs(x - medianH) > 10:
                     if debug == 1:
-                        print("Relative Humidity has changed more than 10% within an hour, LED03 On")
+                        print("Relative Humidity has changed more than 10% within an hour, LED09 On")
                 else:
                     if debug == 1:
                         print("Relative Humidity change is within threshold")
         if (lowL > 200) or (highL > 200):
             if debug == 1:
-                print("Above Acceptable Level of Lux, LED04 On")
+                print("Above Acceptable Level of Lux, LED10 On")
         if (luxHRs > 1000):
             if debug == 1:
-                print("Above Acceptable Level of Lux Hours within 24 hours, LED05 On")
+                print("Above Acceptable Level of Lux Hours within 24 hours, LED11 On")
 
         if (ltr_down >= 3):
             if debug == 1:
