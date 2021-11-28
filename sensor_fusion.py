@@ -223,10 +223,7 @@ try:
         lowL, highL = marzulloAlgorithm(lux_intervals, N, 2)
         # Finding Median value
         medianL = (lowL+highL)/2
-        # Finding new Precision variance
-        luxMA = (highL - lowL)/2
         if debug == 1:
-            print("Lux Precision is now: +/- %0.1f%%" % luxMA)
             print("Median Lux is: %0.1f" % medianL)
         # Adding current Lux to total lux over 24 Hours for Lux Hours Value
         # For Readings 1/min, 60 readings per hour, total 1440 readings per day
