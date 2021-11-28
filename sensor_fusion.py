@@ -55,6 +55,12 @@ count = 0
 ## Increments when sensor is down, triggers LED at 3
 ltr_down = 0
 htu_down = 0
+## Indicates current status of each sensor series (1-3)
+## Set to 1 each time sensor is down, triggers LED at 1
+sensor_error = [0, 0, 0]
+## Indicates historic status of each sensor series (1-3)
+## Increments when sensor_error is 1, triggers LED at 3
+sensor_down = [0, 0, 0]
 
 # List for Humidity Values over hour period to check for >10% change
 ## 1 reading per minute = 60 readings per hour
@@ -131,6 +137,7 @@ def readSensors(chan):
     ## 1 = sensor is up, 0 = sensor is down
     ltr_status = 0
     htu_status = 0
+    up_down = 0
 
     try:
         if debug == 1:
@@ -156,6 +163,11 @@ def readSensors(chan):
         if debug == 1:
             print("HTU Sensor Down")
 
+    if (ltr_status == 0) or (htu_status == 0):
+        up_down = 1
+        if debug == 1:
+            print("Sensor Series Down")
+
     if debug == 1:
         print("\nSensor Series has the following readings: ")
     if htu_status == 1:
@@ -180,7 +192,7 @@ def readSensors(chan):
     # Disable MUX channel
     test.disable_channels(chan)
     # Return Sensor Readings
-    return temperature, relative_humidity, lux
+    return temperature, relative_humidity, lux, up_down
 
 # Disable all channels for fresh start
 test.disable_all()
@@ -188,21 +200,24 @@ test.disable_all()
 try:
     while True:
         # Read Sensors from first channel and account for precision error
-        temperature, relative_humidity, lux = readSensors(0)
+        temperature, relative_humidity, lux, sensor_error[0] = readSensors(0)
+        sensor_down[0] = sensor_down[0] + sensor_error[0]
         temp_intervals = [[float(temperature) - 0.2, float(temperature) + 0.2]]
         hum_intervals = [[float(relative_humidity) - 2, float(relative_humidity) + 2]]
         #luxSet = [lux] # +- 10% of the output
         lux_intervals = [[float(lux) - float(lux/10), float(lux) + float(lux/10)]]
 
         # Read Sensors from second channel and account for precision error
-        temperature, relative_humidity, lux = readSensors(3)
+        temperature, relative_humidity, lux, sensor_error[1] = readSensors(3)
+        sensor_down[1] = sensor_down[1] + sensor_error[1]
         temp_intervals.append([float(temperature) - 0.2, float(temperature) + 0.2])
         hum_intervals.append([float(relative_humidity) - 2, float(relative_humidity) + 2])
         #luxSet.append(lux)
         lux_intervals.append([float(lux) - float(lux/10), float(lux) + float(lux/10)])
 
         # Read Sensors from third channel and account for precision error
-        temperature, relative_humidity, lux = readSensors(7)
+        temperature, relative_humidity, lux, sensor_error[2] = readSensors(7)
+        sensor_down[2] = sensor_down[2] + sensor_error[2]
         temp_intervals.append([float(temperature) - 0.2, float(temperature) + 0.2])
         hum_intervals.append([float(relative_humidity) - 2, float(relative_humidity) + 2])
         #luxSet.append(lux)
@@ -310,10 +325,34 @@ try:
 
         if (ltr_down >= 3):
             if debug == 1:
-                print("LTR Sensor Down 3 times, LED06 On")
+                print("LTR Sensor Down 3 times")
         if (htu_down >= 3):
             if debug == 1:
-                print("HTU Sensor Down 3 times, LED07 On")
+                print("HTU Sensor Down 3 times")
+
+        if sensor_error[0] == 1:
+            if debug == 1:
+                print("Sensor Series 1 down")
+
+        if sensor_error[1] == 1:
+            if debug == 1:
+                print("Sensor Series 2 down")
+
+        if sensor_error[2] == 1:
+            if debug == 1:
+                print("Sensor Series 3 down")
+
+        if sensor_down[0] >= 3:
+            if debug == 1:
+                print("Sensor Series 1 down 3 times")
+
+        if sensor_down[1] >= 3:
+            if debug == 1:
+                print("Sensor Series 2 down 3 times")
+
+        if sensor_down[2] >= 3:
+            if debug == 1:
+                print("Sensor Series 3 down 3 times")
 
         # Disabling Channels to ensure fresh start in next loop
         test.disable_all()
