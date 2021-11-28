@@ -36,6 +36,7 @@ import adafruit_htu31d
 import adafruit_ltr390
 import csv
 import os
+import RPi.GPIO as GPIO
 from datetime import datetime
 
 
@@ -45,6 +46,32 @@ _AVAILABLE_I2C_ADDRESS = [*range(0x70,0x77 + 1)]
 
 # Sets Debug Mode (1 = On)
 debug = 1
+
+# LED GPIO
+## Temp Greather/Less than Soft/Hard Thresholds
+led_temp_gtsoft = 26
+led_temp_ltsoft = 21
+led_temp_gthard = 19
+led_temp_lthard = 20
+## Hum Greather/Less than Soft/Hard Thresholds
+led_hum_gtsoft = 16
+led_hum_ltsoft = 13
+led_hum_gthard = 6
+led_hum_lthard = 12
+## Humidity Change >10% /hr
+led_hum_chng = 5
+## Current Lux threshold Exceeded
+led_lux_gt = 7
+## LuxHours threshold over 24hrs Exceeded
+led_luxhr_gt = 8
+## Either/Both Sensors in Series Currently Down
+led_s01_err = 25
+led_s02_err = 11
+led_s03_err = 9
+## Either/Both Sensors in Series Down for 3 or more Cycles
+led_s01_dwn = 10
+led_s02_dwn = 24
+led_s03_dwn = 23
 
 # Value to hold Cumulative Lux Hours over 24hr Period
 luxHRs = 0
@@ -187,8 +214,31 @@ def readSensors(chan):
     # Return Sensor Readings
     return temperature, relative_humidity, lux, up_down
 
+def led_setup():
+    led_list = [led_temp_gtsoft, led_temp_ltsoft, led_temp_gthard, led_temp_lthard,
+    led_hum_gtsoft, led_hum_ltsoft, led_hum_gthard, led_hum_lthard, led_hum_chng,
+    led_lux_gt, led_luxhr_gt, led_s01_err, led_s02_err, led_s03_err, led_s01_dwn,
+    led_s02_dwn, led_s03_dwn]
+
+    GPIO.setmode(GPIO.BCM)
+    for x in led_list:
+        GPIO.setup(x, GPIO.OUT)
+        GPIO.output(x, GPIO.LOW)
+
+def led_cleanup():
+    led_list = [led_temp_gtsoft, led_temp_ltsoft, led_temp_gthard, led_temp_lthard,
+    led_hum_gtsoft, led_hum_ltsoft, led_hum_gthard, led_hum_lthard, led_hum_chng,
+    led_lux_gt, led_luxhr_gt, led_s01_err, led_s02_err, led_s03_err, led_s01_dwn,
+    led_s02_dwn, led_s03_dwn]
+
+    for x in led_list:
+        GPIO.output(x, GPIO.LOW)
+    GPIO.cleanup()
+
+
 # Disable all channels for fresh start
 test.disable_all()
+led_setup()
 
 try:
     while True:
@@ -263,70 +313,114 @@ try:
 
         # Testing Marzullo Output against Thresholds to determine if alert is triggered
         if (lowT < 20.5):
+            GPIO.output(led_temp_ltsoft, GPIO.HIGH)
             if debug == 1:
                 print("Below Soft Range of Acceptable Temp, LED02 On")
             if (lowT < 20):
+                GPIO.output(led_temp_lthard, GPIO.HIGH)
                 if debug == 1:
                     print("Below Hard Range of Acceptable Temp, LED04 On")
+            else:
+                GPIO.output(led_temp_lthard, GPIO.LOW)
+        else:
+            GPIO.output(led_temp_ltsoft, GPIO.LOW)
         if (highT > 21.5):
+            GPIO.output(led_temp_gtsoft, GPIO.HIGH)
             if debug == 1:
                 print("Above Soft Range of Acceptable Temp, LED01 On")
             if (highT > 22):
+                GPIO.output(led_temp_gthard, GPIO.HIGH)
                 if debug == 1:
                     print("Above Hard Range of Acceptable Temp, LED03 On")
+            else:
+                GPIO.output(led_temp_gthard, GPIO.LOW)
+        else:
+            GPIO.output(led_temp_gtsoft, GPIO.LOW)
         if (lowH < 40.0):
+            GPIO.output(led_hum_ltsoft, GPIO.HIGH)
             if debug == 1:
                 print("Below Soft Range of Acceptable Relative Humidity, LED06 On")
             if (lowH < 25.0):
+                GPIO.output(led_hum_lthard, GPIO.HIGH)
                 if debug == 1:
                     print("Below Hard Range of Acceptable Relative Humidity, LED08 On")
+            else:
+                GPIO.output(led_hum_lthard, GPIO.LOW)
+        else:
+            GPIO.output(led_hum_ltsoft, GPIO.LOW)
         if (highH > 50.0):
+            GPIO.output(led_hum_gtsoft, GPIO.HIGH)
             if debug == 1:
                 print("Above Soft Range of Acceptable Relative Humidity, LED05 On")
             if (highH > 65.0):
+                GPIO.output(led_hum_gthard, GPIO.HIGH)
                 if debug == 1:
                     print("Above Hard Range of Acceptable Relative Humidity, LED07 On")
+            else:
+                GPIO.output(led_hum_gthard, GPIO.LOW)
+        else:
+            GPIO.output(led_hum_gtsoft, GPIO.LOW)
 
-        # If hum_over_hour list still has None values
+        # If hum_over_hour list still has 'None' values
         if count < 60:
             for x in range(count):
                 if abs(hum_over_hour[x] - medianH) > 10:
+                    GPIO.output(led_hum_chng, GPIO.HIGH)
                     if debug == 1:
                         print("Relative Humidity has changed more than 10% within an hour, LED09 On")
                         break
         else: # Code has run for more than an hour so safe to compare all items in list
             for x in hum_over_hour:
                 if abs(x - medianH) > 10:
+                    GPIO.output(led_hum_chng, GPIO.HIGH)
                     if debug == 1:
                         print("Relative Humidity has changed more than 10% within an hour, LED09 On")
-                else:
-                    if debug == 1:
-                        print("Relative Humidity change is within threshold")
+                #else:
+                #    if debug == 1:
+                #        print("Relative Humidity change is within threshold")
 
         if (lowL > 200) or (highL > 200):
+            GPIO.output(led_lux_gt, GPIO.HIGH)
             if debug == 1:
                 print("Above Acceptable Level of Lux, LED10 On")
+        else:
+            GPIO.output(led_lux_gt, GPIO.LOW)
         if (luxHRs > 1000):
+            GPIO.output(led_luxhr_gt, GPIO.HIGH)
             if debug == 1:
                 print("Above Acceptable Level of Lux Hours within 24 hours, LED11 On")
+        else:
+            GPIO.output(led_luxhr_gt, GPIO.LOW)
 
         if sensor_error[0] == 1:
+            GPIO.output(led_s01_err, GPIO.HIGH)
             if debug == 1:
                 print("Sensor Series 1 down, LED12 On")
+        else:
+            GPIO.output(led_s01_err, GPIO.LOW)
         if sensor_error[1] == 1:
+            GPIO.output(led_s02_err, GPIO.HIGH)
             if debug == 1:
                 print("Sensor Series 2 down, LED13 On")
+        else:
+            GPIO.output(led_s02_err, GPIO.LOW)
         if sensor_error[2] == 1:
+            GPIO.output(led_s03_err, GPIO.HIGH)
             if debug == 1:
                 print("Sensor Series 3 down, LED14 On")
+        else:
+            GPIO.output(led_s03_err, GPIO.LOW)
 
         if sensor_down[0] >= 3:
+            GPIO.output(led_s01_dwn, GPIO.HIGH)
             if debug == 1:
                 print("Sensor Series 1 down 3 times, LED15 On")
         if sensor_down[1] >= 3:
+            GPIO.output(led_s02_dwn, GPIO.HIGH)
             if debug == 1:
                 print("Sensor Series 2 down 3 times, LED16 On")
         if sensor_down[2] >= 3:
+            GPIO.output(led_s03_dwn, GPIO.HIGH)
             if debug == 1:
                 print("Sensor Series 3 down 3 times, LED17 On")
 
@@ -348,5 +442,7 @@ try:
         # Setting to 5 caused log entries every 6 seconds instead of 5
         time.sleep(4)
 except KeyboardInterrupt:
+    #GPIO.cleanup()
+    led_cleanup()
     print("\n")
     pass
