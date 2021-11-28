@@ -18,8 +18,8 @@
 # Alert is produced if daily light exposure greater than 1000 lux hours
 # Debug Mode implemented: If debug set to 1, print states will execute to aid in
 ## debugging.
-# Alert is produced when any sensor in a series fails
-# Alert is produced when a specific sensor series remains down for 3 cycles
+# Alert is produced when a sensor, or multiple sensors fail
+# Alert is produced when a specific sensor remains down for 3 cycles
 #
 # Questions:
 # How often should readings be taken and should the 'loop' take place in this
@@ -52,6 +52,9 @@ luxHRs = 0
 # Loop Counter
 count = 0
 
+## Increments when sensor is down, triggers LED at 3
+#ltr_down = 0
+#htu_down = 0
 ## Indicates current status of each sensor series (1-3)
 ## Set to 1 each time sensor is down, triggers LED at 1
 sensor_error = [0, 0, 0]
@@ -143,6 +146,8 @@ def readSensors(chan):
         ltr_status = 1
     except ValueError as error1:
         print(error1)
+        #global ltr_down
+        #ltr_down = ltr_down + 1
         if debug == 1:
             print("LTR Sensor Down")
 
@@ -153,6 +158,8 @@ def readSensors(chan):
         htu_status = 1
     except ValueError as error2:
         print(error2)
+        #global htu_down
+        #htu_down = htu_down + 1
         if debug == 1:
             print("HTU Sensor Down")
 
@@ -197,6 +204,7 @@ try:
         sensor_down[0] = sensor_down[0] + sensor_error[0]
         temp_intervals = [[float(temperature) - 0.2, float(temperature) + 0.2]]
         hum_intervals = [[float(relative_humidity) - 2, float(relative_humidity) + 2]]
+        #luxSet = [lux] # +- 10% of the output
         lux_intervals = [[float(lux) - float(lux/10), float(lux) + float(lux/10)]]
 
         # Read Sensors from second channel and account for precision error
@@ -204,6 +212,7 @@ try:
         sensor_down[1] = sensor_down[1] + sensor_error[1]
         temp_intervals.append([float(temperature) - 0.2, float(temperature) + 0.2])
         hum_intervals.append([float(relative_humidity) - 2, float(relative_humidity) + 2])
+        #luxSet.append(lux)
         lux_intervals.append([float(lux) - float(lux/10), float(lux) + float(lux/10)])
 
         # Read Sensors from third channel and account for precision error
@@ -211,6 +220,7 @@ try:
         sensor_down[2] = sensor_down[2] + sensor_error[2]
         temp_intervals.append([float(temperature) - 0.2, float(temperature) + 0.2])
         hum_intervals.append([float(relative_humidity) - 2, float(relative_humidity) + 2])
+        #luxSet.append(lux)
         lux_intervals.append([float(lux) - float(lux/10), float(lux) + float(lux/10)])
 
 
@@ -218,6 +228,8 @@ try:
         if debug == 1:
             print("\nApplying Marzullo's Algorithm returns the following results: ")
 
+        # Currently not using MA on Lux, instead just finding avg of 3 readings
+        #avgLux = (luxSet[0] + luxSet[1] + luxSet[2])/3
         # Running Marzullo's Algorithm on Lux Readings
         N = len(lux_intervals)
         lowL, highL = marzulloAlgorithm(lux_intervals, N, 2)
@@ -289,7 +301,6 @@ try:
             if (highH > 65.0):
                 if debug == 1:
                     print("Above Hard Range of Acceptable Relative Humidity, LED07 On")
-
         # If hum_over_hour list still has None values
         if count < 60:
             for x in range(count):
@@ -305,7 +316,6 @@ try:
                 else:
                     if debug == 1:
                         print("Relative Humidity change is within threshold")
-
         if (lowL > 200) or (highL > 200):
             if debug == 1:
                 print("Above Acceptable Level of Lux, LED10 On")
@@ -313,12 +323,21 @@ try:
             if debug == 1:
                 print("Above Acceptable Level of Lux Hours within 24 hours, LED11 On")
 
+        #if (ltr_down >= 3):
+        #    if debug == 1:
+        #        print("LTR Sensor Down 3 times")
+        #if (htu_down >= 3):
+        #    if debug == 1:
+        #        print("HTU Sensor Down 3 times")
+
         if sensor_error[0] == 1:
             if debug == 1:
                 print("Sensor Series 1 down")
+
         if sensor_error[1] == 1:
             if debug == 1:
                 print("Sensor Series 2 down")
+
         if sensor_error[2] == 1:
             if debug == 1:
                 print("Sensor Series 3 down")
@@ -326,9 +345,11 @@ try:
         if sensor_down[0] >= 3:
             if debug == 1:
                 print("Sensor Series 1 down 3 times")
+
         if sensor_down[1] >= 3:
             if debug == 1:
                 print("Sensor Series 2 down 3 times")
+
         if sensor_down[2] >= 3:
             if debug == 1:
                 print("Sensor Series 3 down 3 times")
