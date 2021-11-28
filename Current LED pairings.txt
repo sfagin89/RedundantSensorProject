@@ -1,23 +1,25 @@
 LEDs
 
-ORG LED01 - Above Soft Temp Range
-GRE LED02 - Below Soft Temp Range
-RED LED03 - Above Hard Temp Range
-BLU LED04 - Below Hard Temp Range
+PIN 39 = GND
 
-ORG LED05 - Above Soft Hum Range
-GRE LED06 - Below Soft Hum Range
-RED LED07 - Above Hard Hum Range
-BLU LED08 - Below Hard Hum Range
+ORG LED01 - GPIO 26 | PIN 37 - Above Soft Temp Range
+GRE LED02 - GPIO 21 | PIN 40 - Below Soft Temp Range
+RED LED03 - GPIO 19 | PIN 35 - Above Hard Temp Range
+BLU LED04 - GPIO 20 | PIN 38 - Below Hard Temp Range
 
-LED09 - Humidity Change > 10% /hr
+ORG LED05 - GPIO 16 | PIN 36 - Above Soft Hum Range
+GRE LED06 - GPIO 13 | PIN 33 - Below Soft Hum Range
+RED LED07 - GPIO 06 | PIN 31 - Above Hard Hum Range
+BLU LED08 - GPIO 12 | PIN 32 - Below Hard Hum Range
 
-LED10 - Lux Threshold Exceeded
-LED11 - Lux Hours Threshold Exceeded
+ORG LED09 - GPIO 05 | PIN 29 - Humidity Change > 10% /hr
 
-LED12 - Sensor Series 1 down
-LED13 - Sensor Series 2 down
-LED14 - Sensor Series 3 down
-LED15 - Sensor Series 1 down 3 or more times
-LED16 - Sensor Series 2 down 3 or more times
-LED17 - Sensor Series 3 down 3 or more times
+RED LED10 - GPIO 07 | PIN 26 - Lux Threshold Exceeded
+RED LED11 - GPIO 08 | PIN 24 - Lux Hours Threshold Exceeded
+
+ORG LED12 - GPIO 25 | PIN 22 - Sensor Series 1 down
+ORG LED13 - GPIO 11 | PIN 23 - Sensor Series 2 down
+ORG LED14 - GPIO 09 | PIN 21 - Sensor Series 3 down
+RED LED15 - GPIO 10 | PIN 19 - Sensor Series 1 down 3 or more times
+RED LED16 - GPIO 24 | PIN 18 - Sensor Series 2 down 3 or more times
+RED LED17 - GPIO 23 | PIN 16 - Sensor Series 3 down 3 or more times
