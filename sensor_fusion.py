@@ -315,23 +315,23 @@ try:
 
         if sensor_error[0] == 1:
             if debug == 1:
-                print("Sensor Series 1 down")
+                print("Sensor Series 1 down, LED12 On")
         if sensor_error[1] == 1:
             if debug == 1:
-                print("Sensor Series 2 down")
+                print("Sensor Series 2 down, LED13 On")
         if sensor_error[2] == 1:
             if debug == 1:
-                print("Sensor Series 3 down")
+                print("Sensor Series 3 down, LED14 On")
 
         if sensor_down[0] >= 3:
             if debug == 1:
-                print("Sensor Series 1 down 3 times")
+                print("Sensor Series 1 down 3 times, LED15 On")
         if sensor_down[1] >= 3:
             if debug == 1:
-                print("Sensor Series 2 down 3 times")
+                print("Sensor Series 2 down 3 times, LED16 On")
         if sensor_down[2] >= 3:
             if debug == 1:
-                print("Sensor Series 3 down 3 times")
+                print("Sensor Series 3 down 3 times, LED17 On")
 
         # Disabling Channels to ensure fresh start in next loop
         test.disable_all()
