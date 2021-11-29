@@ -20,6 +20,6 @@ RED LED11 - GPIO 08 | PIN 24 - Lux Hours Threshold Exceeded
 ORG LED12 - GPIO 25 | PIN 22 - Sensor Series 1 down
 ORG LED13 - GPIO 11 | PIN 23 - Sensor Series 2 down
 ORG LED14 - GPIO 09 | PIN 21 - Sensor Series 3 down
-RED LED15 - GPIO 10 | PIN 19 - Sensor Series 1 down 3 or more times
-RED LED16 - GPIO 24 | PIN 18 - Sensor Series 2 down 3 or more times
-RED LED17 - GPIO 23 | PIN 16 - Sensor Series 3 down 3 or more times
+RED LED15 - GPIO 10 | PIN 19 - Sensor Series 1 down 3 or more times in a row
+RED LED16 - GPIO 24 | PIN 18 - Sensor Series 2 down 3 or more times in a row
+RED LED17 - GPIO 23 | PIN 16 - Sensor Series 3 down 3 or more times in a row

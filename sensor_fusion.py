@@ -244,21 +244,30 @@ try:
     while True:
         # Read Sensors from first channel and account for precision error
         temperature, relative_humidity, lux, sensor_error[0] = readSensors(0)
-        sensor_down[0] = sensor_down[0] + sensor_error[0]
+        if (sensor_error[0] == 0):
+            sensor_down[0] = 0
+        else:
+            sensor_down[0] = sensor_down[0] + sensor_error[0]
         temp_intervals = [[float(temperature) - 0.2, float(temperature) + 0.2]]
         hum_intervals = [[float(relative_humidity) - 2, float(relative_humidity) + 2]]
         lux_intervals = [[float(lux) - float(lux/10), float(lux) + float(lux/10)]]
 
         # Read Sensors from second channel and account for precision error
         temperature, relative_humidity, lux, sensor_error[1] = readSensors(3)
-        sensor_down[1] = sensor_down[1] + sensor_error[1]
+        if (sensor_error[1] == 0):
+            sensor_down[1] = 0
+        else:
+            sensor_down[1] = sensor_down[1] + sensor_error[1]
         temp_intervals.append([float(temperature) - 0.2, float(temperature) + 0.2])
         hum_intervals.append([float(relative_humidity) - 2, float(relative_humidity) + 2])
         lux_intervals.append([float(lux) - float(lux/10), float(lux) + float(lux/10)])
 
         # Read Sensors from third channel and account for precision error
         temperature, relative_humidity, lux, sensor_error[2] = readSensors(7)
-        sensor_down[2] = sensor_down[2] + sensor_error[2]
+        if (sensor_error[2] == 0):
+            sensor_down[2] = 0
+        else:
+            sensor_down[2] = sensor_down[2] + sensor_error[2]
         temp_intervals.append([float(temperature) - 0.2, float(temperature) + 0.2])
         hum_intervals.append([float(relative_humidity) - 2, float(relative_humidity) + 2])
         lux_intervals.append([float(lux) - float(lux/10), float(lux) + float(lux/10)])
@@ -270,7 +279,11 @@ try:
 
         # Running Marzullo's Algorithm on Lux Readings
         N = len(lux_intervals)
-        lowL, highL = marzulloAlgorithm(lux_intervals, N, 2)
+        if (sensor_error[0]+sensor_error[1]+sensor_error[2] < 2):
+            lowL, highL = marzulloAlgorithm(lux_intervals, N, 2)
+        else:
+            lowL = lux_intervals[0][0]+lux_intervals[1][0]+lux_intervals[2][0]
+            highL = lux_intervals[0][1]+lux_intervals[1][1]+lux_intervals[2][1]
         # Finding Median value
         medianL = (lowL+highL)/2
         if debug == 1:
@@ -287,7 +300,11 @@ try:
 
         # Running Marzullo's Algorithm on Temperature Readings
         N = len(temp_intervals)
-        lowT, highT = marzulloAlgorithm(temp_intervals, N, 0)
+        if (sensor_error[0]+sensor_error[1]+sensor_error[2] < 2):
+            lowT, highT = marzulloAlgorithm(temp_intervals, N, 0)
+        else:
+            lowT = temp_intervals[0][0]+temp_intervals[1][0]+temp_intervals[2][0]
+            highT = temp_intervals[0][1]+temp_intervals[1][1]+temp_intervals[2][1]
         # Finding Median value
         medianT = (lowT+highT)/2
         # Finding new Precision variance
@@ -298,7 +315,11 @@ try:
 
         # Running Marzullo's Algorithm on Humidity Readings
         N = len(hum_intervals)
-        lowH, highH = marzulloAlgorithm(hum_intervals, N, 1)
+        if (sensor_error[0]+sensor_error[1]+sensor_error[2] < 2):
+            lowH, highH = marzulloAlgorithm(hum_intervals, N, 1)
+        else:
+            lowH = hum_intervals[0][0]+hum_intervals[1][0]+hum_intervals[2][0]
+            highH = hum_intervals[0][1]+hum_intervals[1][1]+hum_intervals[2][1]
         # Finding Median value
         medianH = (lowH+highH)/2
 
