@@ -49,14 +49,14 @@ debug = 1
 
 # LED GPIO
 ## Temp Greather/Less than Soft/Hard Thresholds
-led_temp_gtsoft = 26
-led_temp_ltsoft = 21
-led_temp_gthard = 19
+led_temp_gthard = 26
+led_temp_gtsoft = 21
+led_temp_ltsoft = 19
 led_temp_lthard = 20
 ## Hum Greather/Less than Soft/Hard Thresholds
-led_hum_gtsoft = 16
-led_hum_ltsoft = 13
-led_hum_gthard = 6
+led_hum_gthard = 16
+led_hum_gtsoft = 13
+led_hum_ltsoft = 6
 led_hum_lthard = 12
 ## Humidity Change >10% /hr
 led_hum_chng = 5

@@ -2,14 +2,14 @@ LEDs
 
 PIN 39 = GND
 
-ORG LED01 - GPIO 26 | PIN 37 - Above Soft Temp Range
-GRE LED02 - GPIO 21 | PIN 40 - Below Soft Temp Range
-RED LED03 - GPIO 19 | PIN 35 - Above Hard Temp Range
+RED LED01 - GPIO 26 | PIN 37 - Above Hard Temp Range
+ORG LED02 - GPIO 21 | PIN 40 - Above Soft Temp Range
+GRE LED03 - GPIO 19 | PIN 35 - Below Soft Temp Range
 BLU LED04 - GPIO 20 | PIN 38 - Below Hard Temp Range
 
-ORG LED05 - GPIO 16 | PIN 36 - Above Soft Hum Range
-GRE LED06 - GPIO 13 | PIN 33 - Below Soft Hum Range
-RED LED07 - GPIO 06 | PIN 31 - Above Hard Hum Range
+RED LED05 - GPIO 16 | PIN 36 - Above Hard Hum Range
+ORG LED06 - GPIO 13 | PIN 33 - Above Soft Hum Range
+GRE LED07 - GPIO 06 | PIN 31 - Below Soft Hum Range
 BLU LED08 - GPIO 12 | PIN 32 - Below Hard Hum Range
 
 ORG LED09 - GPIO 05 | PIN 29 - Humidity Change > 10% /hr
@@ -20,6 +20,6 @@ RED LED11 - GPIO 08 | PIN 24 - Lux Hours Threshold Exceeded
 ORG LED12 - GPIO 25 | PIN 22 - Sensor Series 1 down
 ORG LED13 - GPIO 11 | PIN 23 - Sensor Series 2 down
 ORG LED14 - GPIO 09 | PIN 21 - Sensor Series 3 down
-RED LED15 - GPIO 10 | PIN 19 - Sensor Series 1 down 3 or more times in a row
-RED LED16 - GPIO 24 | PIN 18 - Sensor Series 2 down 3 or more times in a row
-RED LED17 - GPIO 23 | PIN 16 - Sensor Series 3 down 3 or more times in a row
+RED LED15 - GPIO 10 | PIN 19 - Sensor Series 1 down 3 times in a row
+RED LED16 - GPIO 24 | PIN 18 - Sensor Series 2 down 3 times in a row
+RED LED17 - GPIO 23 | PIN 16 - Sensor Series 3 down 3 times in a row
