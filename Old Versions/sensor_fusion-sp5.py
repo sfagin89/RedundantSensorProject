@@ -125,7 +125,7 @@ def logWrite(dataList):
     dateObj = dateTimeObj.date()
     currentDate = dateObj.strftime("%b-%d-%Y")
     file = "sensor_log_"+currentDate+".csv"
-    headers = ['Date', 'Time Stamp', 'Temperature', 'Relative Humidity', 'Current Lux', 'Cumulative Lux Hours', 'Series 1', 'Series 2', 'Series 3']
+    headers = ['Date', 'Time Stamp', 'Temperature', 'Relative Humidity', 'Current Lux', 'Cumulative Lux Hours']
 
     # Checking if Log file exists
     if not os.path.exists(file):
@@ -163,7 +163,6 @@ def readSensors(chan):
     htu_status = 0
     up_down = 0
 
-    #Checking if UV sensor is reachable at i2c address
     try:
         if debug == 1:
             print("Checking LTR Sensor")
@@ -174,7 +173,6 @@ def readSensors(chan):
         if debug == 1:
             print("LTR Sensor Down")
 
-    #Checking if temp/hum sensor is reachable at i2c address
     try:
         if debug == 1:
             print("Checking HTU Sensor")
@@ -185,44 +183,31 @@ def readSensors(chan):
         if debug == 1:
             print("HTU Sensor Down")
 
-    #If either sensor is down, treat whole series as down
     if (ltr_status == 0) or (htu_status == 0):
         up_down = 1
-        temperature = 0
-        relative_humidity = 0
-        lux = 0
         if debug == 1:
             print("Sensor Series Down")
-    else:
+
+    if debug == 1:
+        print("\nSensor Series has the following readings: ")
+    if htu_status == 1:
+        temperature, relative_humidity = htu.measurements
         if debug == 1:
-            print("\nSensor Series has the following readings: ")
+            # Print Temp & Humidity Sensor Readings for Debugging Purposes
+            print("Temperature: %0.1f C" % temperature)
+            print("Humidity: %0.1f%%" % relative_humidity)
+    else:
+        temperature = 0
+        relative_humidity = 0
 
-        if htu_status == 1: #Double checking sensor is up
-            temperature, relative_humidity = htu.measurements
-            #EDIT 01: Taking sensor input in as float up to 1 decimal place.
-            #unformatedTemp, unformatedHum = htu.measurements
-            #temperature = "{:.1f}".format(float(unformatedTemp))
-            #relative_humidity = "{:.1f}".format(float(unformatedHum))
-            if debug == 1:
-                # Print Temp & Humidity Sensor Readings for Debugging Purposes
-                print("Temperature: %0.1f C" % temperature)
-                print("Humidity: %0.1f%%" % relative_humidity)
-        else:
-            temperature = 0
-            relative_humidity = 0
-
-        if ltr_status == 1: #Double checking sensor is up
-            lux = ltr.lux
-            #EDIT 02: Taking sensor input in as float up to 1 decimal place.
-            #unformatedLux = ltr.lux
-            #lux = "{:.1f}".format(float(unformatedLux))
-            if debug == 1:
-                # Print UV Sensor Readings for Debugging Purposes
-                #EDIT 03: Formatted output of non-saved values for readability
-                print("UV: %0.1f", % ltr.uvs, "\t\tAmbient Light: %0.1f", % ltr.light)
-                print("UVI: %0.1f", % ltr.uvi, "\t\tLux: %0.1f", % lux)
-        else:
-            lux = 0
+    if ltr_status == 1:
+        lux = ltr.lux
+        if debug == 1:
+            # Print UV Sensor Readings for Debugging Purposes
+            print("UV:", ltr.uvs, "\t\tAmbient Light:", ltr.light)
+            print("UVI:", ltr.uvi, "\t\tLux:", lux)
+    else:
+        lux = 0
 
     # Disable MUX channel
     test.disable_channels(chan)
@@ -348,11 +333,10 @@ try:
             print("\n")
 
         # Testing Marzullo Output against Thresholds to determine if alert is triggered
-        #EDIT 04: Fixed Swapped LED Print Statements
         if (lowT < 20.5):
             GPIO.output(led_temp_ltsoft, GPIO.HIGH)
             if debug == 1:
-                print("Below Soft Range of Acceptable Temp, LED03 On")
+                print("Below Soft Range of Acceptable Temp, LED02 On")
             if (lowT < 20):
                 GPIO.output(led_temp_lthard, GPIO.HIGH)
                 if debug == 1:
@@ -364,11 +348,11 @@ try:
         if (highT > 21.5):
             GPIO.output(led_temp_gtsoft, GPIO.HIGH)
             if debug == 1:
-                print("Above Soft Range of Acceptable Temp, LED02 On")
+                print("Above Soft Range of Acceptable Temp, LED01 On")
             if (highT > 22):
                 GPIO.output(led_temp_gthard, GPIO.HIGH)
                 if debug == 1:
-                    print("Above Hard Range of Acceptable Temp, LED01 On")
+                    print("Above Hard Range of Acceptable Temp, LED03 On")
             else:
                 GPIO.output(led_temp_gthard, GPIO.LOW)
         else:
@@ -376,7 +360,7 @@ try:
         if (lowH < 40.0):
             GPIO.output(led_hum_ltsoft, GPIO.HIGH)
             if debug == 1:
-                print("Below Soft Range of Acceptable Relative Humidity, LED07 On")
+                print("Below Soft Range of Acceptable Relative Humidity, LED06 On")
             if (lowH < 25.0):
                 GPIO.output(led_hum_lthard, GPIO.HIGH)
                 if debug == 1:
@@ -388,11 +372,11 @@ try:
         if (highH > 50.0):
             GPIO.output(led_hum_gtsoft, GPIO.HIGH)
             if debug == 1:
-                print("Above Soft Range of Acceptable Relative Humidity, LED06 On")
+                print("Above Soft Range of Acceptable Relative Humidity, LED05 On")
             if (highH > 65.0):
                 GPIO.output(led_hum_gthard, GPIO.HIGH)
                 if debug == 1:
-                    print("Above Hard Range of Acceptable Relative Humidity, LED05 On")
+                    print("Above Hard Range of Acceptable Relative Humidity, LED07 On")
             else:
                 GPIO.output(led_hum_gthard, GPIO.LOW)
         else:
@@ -451,15 +435,15 @@ try:
         if sensor_down[0] >= 3:
             GPIO.output(led_s01_dwn, GPIO.HIGH)
             if debug == 1:
-                print("Sensor Series 1 down 3 times in a row, LED15 On")
+                print("Sensor Series 1 down 3 times, LED15 On")
         if sensor_down[1] >= 3:
             GPIO.output(led_s02_dwn, GPIO.HIGH)
             if debug == 1:
-                print("Sensor Series 2 down 3 times in a row, LED16 On")
+                print("Sensor Series 2 down 3 times, LED16 On")
         if sensor_down[2] >= 3:
             GPIO.output(led_s03_dwn, GPIO.HIGH)
             if debug == 1:
-                print("Sensor Series 3 down 3 times in a row, LED17 On")
+                print("Sensor Series 3 down 3 times, LED17 On")
 
         # Disabling Channels to ensure fresh start in next loop
         test.disable_all()
@@ -469,18 +453,8 @@ try:
         timeObj = dateTimeObj.time()
         dateObj = dateTimeObj.date()
 
-        # Setting Valus for Sensor Status In Log file
-        senor_log = [None] * len(sensor_error)
-        stat_count = 0
-        for x in sensor_error:
-            if x == 0:
-                sensor_log[stat_count] = "Up"
-            else
-                sensor_log[stat_count] = "Down"
-            stat_count = stat_count + 1
-
         # Formatting data and writing it to log file.
-        list = [dateObj.strftime("%b-%d-%Y"), timeObj.strftime("%H:%M:%S.%f"), medianT, medianH, medianL, luxHRs, sensor_log[0], sensor_log[1], sensor_log[2]]
+        list = [dateObj.strftime("%b-%d-%Y"), timeObj.strftime("%H:%M:%S.%f"), medianT, medianH, medianL, luxHRs]
         logWrite(list)
 
         #Increase Loop Count at end of loop
