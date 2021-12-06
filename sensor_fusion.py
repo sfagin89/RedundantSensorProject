@@ -151,11 +151,11 @@ def marzulloAlgorithm(intervals,N,t):
 
     if debug == 1:
         if (t == 0):
-            print("\nNew Temperature Range: [%0.1f" % m_left,", %0.1f" % m_right,"]")
+            print("\nNew Temperature Range: [%0.1f C" % m_left,", %0.1f C" % m_right,"]")
         elif (t == 1):
             print("\nNew Humidity Range: [%0.1f%%" % m_left,", %0.1f%%" % m_right,"]")
         else:
-            print("\nNew Lux Range: [",m_left,", ",m_right,"]")
+            print("\nNew Lux Range: [%0.1f" % m_left,", %0.1f" % m_right,"]")
 
     return m_left, m_right
 
@@ -378,8 +378,12 @@ try:
 
         # Finding Median value
         medianL = (lowL+highL)/2
+        medianL = round(medianL, 2)
         # Finding new Precision variance
-        luxMA = ((highL - lowL)/2)/medianL * 100
+        if medianL == 0:
+            luxMA = 0
+        else:
+            luxMA = ((highL - lowL)/2)/medianL * 100
         luxMA = round(luxMA, 2)
         if debug == 1:
             print("\tLux Precision is now: +/- %0.1f%%" % luxMA)
@@ -407,8 +411,10 @@ try:
 
         # Finding Median value
         medianT = (lowT+highT)/2
+        medianT = round(medianT, 2)
         # Finding new Precision variance
         tempMA = (highT - lowT)/2
+        tempMA = round(tempMA, 2)
         if debug == 1:
             print("\tTemperature Precision is now: +/- %0.1f C" % tempMA)
             print("\tMedian Temperature is: %0.1f C" % medianT)
@@ -427,10 +433,12 @@ try:
 
         # Finding Median value
         medianH = (lowH+highH)/2
+        medianH = round(medianH, 2)
 
         hum_over_hour[count%60] = medianH
         # Finding new Precision variance
         humMA = (highH - lowH)/2
+        humMA = round(humMA, 2)
         if debug == 1:
             print("\tRelative Humidity Precision is now: +/- %0.1f%%" % humMA)
             print("\tMedian Relative Humidity is: %0.1f%%\n" % medianH)
