@@ -123,11 +123,10 @@ def marzulloAlgorithm(intervals,N,t):
     m_left = intervals[0][0]
     m_right = intervals[0][1]
 
-    if debug == 1:
-        print("Sorted Values received by Marzullo")
-        for x in range(0,N):
-            print("[",intervals[x][0],", ",intervals[x][1],"]")
-        print("\n")
+    #if debug == 1:
+    #    print("Sorted Values received by Marzullo")
+    #    for x in range(0,N):
+    #        print("[",intervals[x][0],", ",intervals[x][1],"]")
 
     m_intersections = 0 #Interval with highest number of intersections
     for j in range(0,N):
@@ -150,15 +149,13 @@ def marzulloAlgorithm(intervals,N,t):
             m_left = l
             m_right = r
 
-
-
     if debug == 1:
         if (t == 0):
-            print("[%0.1f" % l,", %0.1f" % r,"]")
+            print("\nNew Temperature Range: [%0.1f" % m_left,", %0.1f" % m_right,"]")
         elif (t == 1):
-            print("[%0.1f%%" % l,", %0.1f%%" % r,"]")
+            print("\nNew Humidity Range: [%0.1f%%" % m_left,", %0.1f%%" % m_right,"]")
         else:
-            print("[",l,", ",r,"]")
+            print("\nNew Lux Range: [",m_left,", ",m_right,"]")
 
     return m_left, m_right
 
@@ -169,7 +166,10 @@ def logWrite(dataList):
     dateObj = dateTimeObj.date()
     currentDate = dateObj.strftime("%b-%d-%Y")
     file = "sensor_log_"+currentDate+".csv"
-    headers = ['Date', 'Time Stamp', 'Temperature', 'Relative Humidity', 'Current Lux', 'Cumulative Lux Hours', 'Series 1', 'Series 2', 'Series 3', 'LED01', 'LED02', 'LED03', 'LED04', 'LED05', 'LED06', 'LED07', 'LED08', 'LED09', 'LED10', 'LED11', 'LED12', 'LED13', 'LED14', 'LED15', 'LED16', 'LED17']
+    headers = ['Date', 'Time Stamp', 'Temperature', 'Relative Humidity',
+    'Current Lux', 'Cumulative Lux Hours', 'Series 1', 'Series 2', 'Series 3',
+    'L01', 'L02', 'L03', 'L04', 'L05', 'L06', 'L07', 'L08', 'L09', 'L10', 'L11',
+    'L12', 'L13', 'L14', 'L15', 'L16', 'L17']
 
     # Checking if Log file exists
     if not os.path.exists(file):
@@ -210,13 +210,13 @@ def readSensors(chan):
     #Checking if UV sensor is reachable at i2c address
     try:
         if debug == 1:
-            print("Checking LTR Sensor")
+            print("\nChecking LTR Sensor")
         ltr = adafruit_ltr390.LTR390(i2c)
         ltr_status = 1
     except ValueError as error1:
-        print(error1)
+        print("\t", error1)
         if debug == 1:
-            print("LTR Sensor Down")
+            print("\tLTR Sensor Down")
 
     #Checking if temp/hum sensor is reachable at i2c address
     try:
@@ -225,47 +225,42 @@ def readSensors(chan):
         htu = adafruit_htu31d.HTU31D(i2c)
         htu_status = 1
     except ValueError as error2:
-        print(error2)
+        print("\t", error2)
         if debug == 1:
-            print("HTU Sensor Down")
+            print("\tHTU Sensor Down")
 
     #If either sensor is down, treat whole series as down
     if (ltr_status == 0) or (htu_status == 0):
         up_down = 1
-        #Troubleshooting Edit
         temperature = 0
         relative_humidity = 0
         lux = 0
         if debug == 1:
-            print("Sensor Series Down")
+            print("\nSensor Series Down")
     else:
         if debug == 1:
             print("\nSensor Series has the following readings: ")
 
         if htu_status == 1: #Double checking sensor is up
             temperature, relative_humidity = htu.measurements
-            #EDIT 01: Taking sensor input in as float up to 1 decimal place.
-            #unformatedTemp, unformatedHum = htu.measurements
-            #temperature = "{:.1f}".format(float(unformatedTemp))
-            #relative_humidity = "{:.1f}".format(float(unformatedHum))
+            temperature = round(temperature, 2)
+            relative_humidity = round(relative_humidity, 2)
             if debug == 1:
                 # Print Temp & Humidity Sensor Readings for Debugging Purposes
-                print("Temperature: %0.1f C" % temperature)
-                print("Humidity: %0.1f%%" % relative_humidity)
+                print("\tTemperature: %0.1f C" % temperature)
+                print("\tHumidity: %0.1f%%" % relative_humidity)
         else:
             temperature = 0
             relative_humidity = 0
 
         if ltr_status == 1: #Double checking sensor is up
             lux = ltr.lux
-            #EDIT 02: Taking sensor input in as float up to 1 decimal place.
-            #unformatedLux = ltr.lux
-            #lux = "{:.1f}".format(float(unformatedLux))
+            lux = round(lux, 2)
             if debug == 1:
                 # Print UV Sensor Readings for Debugging Purposes
                 #EDIT 03: Formatted output of non-saved values for readability
-                print("UV: %0.1f" % ltr.uvs, "\t\tAmbient Light: %0.1f" % ltr.light)
-                print("UVI: %0.1f" % ltr.uvi, "\t\tLux: %0.1f" % lux)
+                print("\tUV: %0.1f" % ltr.uvs, "\t\tAmbient Light: %0.1f" % ltr.light)
+                print("\tUVI: %0.1f" % ltr.uvi, "\t\tLux: %0.1f" % lux)
         else:
             lux = 0
 
@@ -273,11 +268,6 @@ def readSensors(chan):
     mux.disable_channels(chan)
 
     # Return Sensor Readings
-    if debug == 1:
-        print("returning lux as %0.1f" % lux)
-        print("returning temp as %0.1f C" % temperature)
-        print("returning hum as %0.1f%%" % relative_humidity)
-
     return temperature, relative_humidity, lux, up_down
 
 def led_setup():
@@ -360,42 +350,40 @@ try:
 
         ########################################################################
         # Marzullo's Algorithm Stage:                                          #
-        #
-        # #
-        # #
+        # If at least 2 sensors are up, sensor readings are sent to the        #
+        # MarzulloAlgorithm function as a series of intervals. If only 1       #
+        # sensor is up, that sensor's reading is set as the low/high values.   #
+        # If no sensors are up, low/high values are set to 0. From the         #
+        # low/high values, the new precision and median values are found. The  #
+        # low/high values are used to check against LED triggers, except for   #
+        # Cummulative LuxHrs, which uses the median lux value, and the change  #
+        # in Humidity over an hour period.                                     #
         ########################################################################
 
         if debug == 1:
-            print("\nApplying Marzullo's Algorithm returns the following results: ")
+            print("\nApplying Marzullo's Algorithm returns the following results:")
 
         # Running Marzullo's Algorithm on Lux Readings
         N = len(lux_intervals)
 
         if (sensor_error[0]+sensor_error[1]+sensor_error[2] < 2):
-            if debug == 1:
-                print("Less than 2 sensors down.")
-                print("Sending the following values to Marzullo")
-                for x in range(0,N):
-                    print("[",lux_intervals[x][0],", ",lux_intervals[x][1],"]")
-                print("\n")
             lowL, highL = marzulloAlgorithm(lux_intervals, N, 2)
         elif (sensor_error[0]+sensor_error[1]+sensor_error[2] == 2):
             lowL, highL = 0, 0
-            print("lowL before loop: ", lowL)
-            print("highL before loop: ", highL)
             for x in range(0,N):
                 lowL = lowL + lux_intervals[x][0]
                 highL = highL + lux_intervals[x][1]
-            print("lowL after loop: ", lowL)
-            print("highL after loop: ", highL)
         else:
             lowL, highL = 0, 0
-            #lowL = lux_intervals[0][0]+lux_intervals[1][0]+lux_intervals[2][0]
-            #highL = lux_intervals[0][1]+lux_intervals[1][1]+lux_intervals[2][1]
+
         # Finding Median value
         medianL = (lowL+highL)/2
+        # Finding new Precision variance
+        luxMA = ((highL - lowL)/2)/medianL * 100
+        luxMA = round(luxMA, 2)
         if debug == 1:
-            print("Median Lux is: %0.1f" % medianL)
+            print("\tLux Precision is now: +/- %0.1f%%" % luxMA)
+            print("\tMedian Lux is: %0.1f" % medianL)
         # Adding current Lux to total lux over 24 Hours for Lux Hours Value
         # For Readings 1/min, 60 readings per hour, total 1440 readings per day
         if count%1440 == 0:
@@ -403,8 +391,7 @@ try:
         #luxHRs = luxHRs + avgLux
         luxHRs = luxHRs + medianL
         if debug == 1:
-            print("Current Lux is: ", medianL)
-            print("Cumulative Lux Hours is: ", luxHRs)
+            print("\tCumulative Lux Hours is: ", luxHRs)
 
         # Running Marzullo's Algorithm on Temperature Readings
         N = len(temp_intervals)
@@ -412,24 +399,19 @@ try:
             lowT, highT = marzulloAlgorithm(temp_intervals, N, 0)
         elif (sensor_error[0]+sensor_error[1]+sensor_error[2] == 2):
             lowT, highT = 0, 0
-            print("lowT before loop: ", lowT)
-            print("highT before loop: ", highT)
             for x in range(0,N):
                 lowT = lowT + temp_intervals[x][0]
                 highT = highT + temp_intervals[x][1]
-            print("lowT after loop: ", lowT)
-            print("highT after loop: ", highT)
         else:
             lowT, highT = 0, 0
-            #lowT = temp_intervals[0][0]+temp_intervals[1][0]+temp_intervals[2][0]
-            #highT = temp_intervals[0][1]+temp_intervals[1][1]+temp_intervals[2][1]
+
         # Finding Median value
         medianT = (lowT+highT)/2
         # Finding new Precision variance
         tempMA = (highT - lowT)/2
         if debug == 1:
-            print("Temperature Precision is now: +/- %0.1f C" % tempMA)
-            print("Median Temperature is: %0.1f C" % medianT)
+            print("\tTemperature Precision is now: +/- %0.1f C" % tempMA)
+            print("\tMedian Temperature is: %0.1f C" % medianT)
 
         # Running Marzullo's Algorithm on Humidity Readings
         N = len(hum_intervals)
@@ -437,17 +419,12 @@ try:
             lowH, highH = marzulloAlgorithm(hum_intervals, N, 1)
         elif (sensor_error[0]+sensor_error[1]+sensor_error[2] == 2):
             lowH, highH = 0, 0
-            print("lowH before loop: ", lowH)
-            print("highH before loop: ", highH)
             for x in range(0,N):
                 lowH = lowH + hum_intervals[x][0]
                 highH = highH + hum_intervals[x][1]
-            print("lowH after loop: ", lowH)
-            print("highH after loop: ", highH)
         else:
             lowH, highH = 0, 0
-            #lowH = hum_intervals[0][0]+hum_intervals[1][0]+hum_intervals[2][0]
-            #highH = hum_intervals[0][1]+hum_intervals[1][1]+hum_intervals[2][1]
+
         # Finding Median value
         medianH = (lowH+highH)/2
 
@@ -455,10 +432,8 @@ try:
         # Finding new Precision variance
         humMA = (highH - lowH)/2
         if debug == 1:
-            print("Relative Humidity Precision is now: +/- %0.1f%%" % humMA)
-            print("Median Relative Humidity is: %0.1f%%" % medianH)
-
-            print("\n")
+            print("\tRelative Humidity Precision is now: +/- %0.1f%%" % humMA)
+            print("\tMedian Relative Humidity is: %0.1f%%\n" % medianH)
 
         ########################################################################
         # LED/Actuator Driver Stage:                                           #
@@ -668,7 +643,12 @@ try:
             stat_count = stat_count + 1
 
         # Formatting data and writing it to log file.
-        list = [dateObj.strftime("%b-%d-%Y"), timeObj.strftime("%H:%M:%S.%f"), medianT, medianH, medianL, luxHRs, sensor_log[0], sensor_log[1], sensor_log[2],led_log]
+        list = [dateObj.strftime("%b-%d-%Y"), timeObj.strftime("%H:%M:%S.%f"),
+        medianT, medianH, medianL, luxHRs, sensor_log[0], sensor_log[1],
+        sensor_log[2], led_log[0], led_log[1], led_log[2], led_log[3],
+        led_log[4], led_log[5], led_log[6], led_log[7], led_log[8], led_log[9],
+        led_log[10], led_log[11], led_log[12], led_log[13], led_log[14],
+        led_log[15], led_log[16]]
         logWrite(list)
 
         #Increase Loop Count at end of loop
