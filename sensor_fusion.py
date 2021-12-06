@@ -118,14 +118,16 @@ mux = qwiic.QwiicTCA9548A()
 ## N = The number of pairs sent (The length)
 ## t = The type of data, used for formatting the output
 def marzulloAlgorithm(intervals,N,t):
+
+    intervals.sort()
     m_left = intervals[0][0]
     m_right = intervals[0][1]
 
-    #if debug == 1:
-    #    print("Values received by Marzullo")
-    #    for x in range(0,N):
-    #        print("[",intervals[x][0],", ",intervals[x][1],"]")
-    #    print("\n")
+    if debug == 1:
+        print("Sorted Values received by Marzullo")
+        for x in range(0,N):
+            print("[",intervals[x][0],", ",intervals[x][1],"]")
+        print("\n")
 
     m_intersections = 0 #Interval with highest number of intersections
     for j in range(0,N):
@@ -322,35 +324,39 @@ try:
         # (3 Currently in use), Current Mux suports 8                          #
         ########################################################################
 
+        temp_intervals = []
+        hum_intervals = []
+        lux_intervals = []
+
         # Read Sensors from first channel and account for precision error
         temperature, relative_humidity, lux, sensor_error[0] = readSensors(0)
         if (sensor_error[0] == 0):
             sensor_down[0] = 0
+            temp_intervals.append([float(temperature) - 0.2, float(temperature) + 0.2])
+            hum_intervals.append([float(relative_humidity) - 2, float(relative_humidity) + 2])
+            lux_intervals.append([float(lux) - float(lux/10), float(lux) + float(lux/10)])
         else:
             sensor_down[0] = sensor_down[0] + sensor_error[0]
-        temp_intervals = [[float(temperature) - 0.2, float(temperature) + 0.2]]
-        hum_intervals = [[float(relative_humidity) - 2, float(relative_humidity) + 2]]
-        lux_intervals = [[float(lux) - float(lux/10), float(lux) + float(lux/10)]]
 
         # Read Sensors from second channel and account for precision error
         temperature, relative_humidity, lux, sensor_error[1] = readSensors(3)
         if (sensor_error[1] == 0):
             sensor_down[1] = 0
+            temp_intervals.append([float(temperature) - 0.2, float(temperature) + 0.2])
+            hum_intervals.append([float(relative_humidity) - 2, float(relative_humidity) + 2])
+            lux_intervals.append([float(lux) - float(lux/10), float(lux) + float(lux/10)])
         else:
             sensor_down[1] = sensor_down[1] + sensor_error[1]
-        temp_intervals.append([float(temperature) - 0.2, float(temperature) + 0.2])
-        hum_intervals.append([float(relative_humidity) - 2, float(relative_humidity) + 2])
-        lux_intervals.append([float(lux) - float(lux/10), float(lux) + float(lux/10)])
 
         # Read Sensors from third channel and account for precision error
         temperature, relative_humidity, lux, sensor_error[2] = readSensors(7)
         if (sensor_error[2] == 0):
             sensor_down[2] = 0
+            temp_intervals.append([float(temperature) - 0.2, float(temperature) + 0.2])
+            hum_intervals.append([float(relative_humidity) - 2, float(relative_humidity) + 2])
+            lux_intervals.append([float(lux) - float(lux/10), float(lux) + float(lux/10)])
         else:
             sensor_down[2] = sensor_down[2] + sensor_error[2]
-        temp_intervals.append([float(temperature) - 0.2, float(temperature) + 0.2])
-        hum_intervals.append([float(relative_humidity) - 2, float(relative_humidity) + 2])
-        lux_intervals.append([float(lux) - float(lux/10), float(lux) + float(lux/10)])
 
         ########################################################################
         # Marzullo's Algorithm Stage:                                          #
@@ -373,11 +379,19 @@ try:
                     print("[",lux_intervals[x][0],", ",lux_intervals[x][1],"]")
                 print("\n")
             lowL, highL = marzulloAlgorithm(lux_intervals, N, 2)
+        elif (sensor_error[0]+sensor_error[1]+sensor_error[2] == 2):
+            lowL, highL = 0, 0
+            print("lowL before loop: ", lowL)
+            print("highL before loop: ", highL)
+            for x in range(0,N):
+                lowL = lowL + lux_intervals[x][0]
+                highL = highL + lux_intervals[x][1]
+            print("lowL after loop: ", lowL)
+            print("highL after loop: ", highL)
         else:
-            if debug == 1:
-                print("2 or more sensors down.")
-            lowL = lux_intervals[0][0]+lux_intervals[1][0]+lux_intervals[2][0]
-            highL = lux_intervals[0][1]+lux_intervals[1][1]+lux_intervals[2][1]
+            lowL, highL = 0, 0
+            #lowL = lux_intervals[0][0]+lux_intervals[1][0]+lux_intervals[2][0]
+            #highL = lux_intervals[0][1]+lux_intervals[1][1]+lux_intervals[2][1]
         # Finding Median value
         medianL = (lowL+highL)/2
         if debug == 1:
@@ -396,9 +410,19 @@ try:
         N = len(temp_intervals)
         if (sensor_error[0]+sensor_error[1]+sensor_error[2] < 2):
             lowT, highT = marzulloAlgorithm(temp_intervals, N, 0)
+        elif (sensor_error[0]+sensor_error[1]+sensor_error[2] == 2):
+            lowT, highT = 0, 0
+            print("lowT before loop: ", lowT)
+            print("highT before loop: ", highT)
+            for x in range(0,N):
+                lowT = lowT + temp_intervals[x][0]
+                highT = highT + temp_intervals[x][1]
+            print("lowT after loop: ", lowT)
+            print("highT after loop: ", highT)
         else:
-            lowT = temp_intervals[0][0]+temp_intervals[1][0]+temp_intervals[2][0]
-            highT = temp_intervals[0][1]+temp_intervals[1][1]+temp_intervals[2][1]
+            lowT, highT = 0, 0
+            #lowT = temp_intervals[0][0]+temp_intervals[1][0]+temp_intervals[2][0]
+            #highT = temp_intervals[0][1]+temp_intervals[1][1]+temp_intervals[2][1]
         # Finding Median value
         medianT = (lowT+highT)/2
         # Finding new Precision variance
@@ -411,9 +435,19 @@ try:
         N = len(hum_intervals)
         if (sensor_error[0]+sensor_error[1]+sensor_error[2] < 2):
             lowH, highH = marzulloAlgorithm(hum_intervals, N, 1)
+        elif (sensor_error[0]+sensor_error[1]+sensor_error[2] == 2):
+            lowH, highH = 0, 0
+            print("lowH before loop: ", lowH)
+            print("highH before loop: ", highH)
+            for x in range(0,N):
+                lowH = lowH + hum_intervals[x][0]
+                highH = highH + hum_intervals[x][1]
+            print("lowH after loop: ", lowH)
+            print("highH after loop: ", highH)
         else:
-            lowH = hum_intervals[0][0]+hum_intervals[1][0]+hum_intervals[2][0]
-            highH = hum_intervals[0][1]+hum_intervals[1][1]+hum_intervals[2][1]
+            lowH, highH = 0, 0
+            #lowH = hum_intervals[0][0]+hum_intervals[1][0]+hum_intervals[2][0]
+            #highH = hum_intervals[0][1]+hum_intervals[1][1]+hum_intervals[2][1]
         # Finding Median value
         medianH = (lowH+highH)/2
 
