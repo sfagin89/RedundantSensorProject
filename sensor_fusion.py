@@ -2,32 +2,33 @@
 #
 # Current Functionality:
 # Takes in readings from each of the 3 sets of sensors using the MUX channels
-# Outputs the results to the screen
+# Outputs the results to the screen when debug mode is enabled.
 # Using the known precision, creates pairs at the outer bounds of the precision
 ## for each reading to make a range of precision.
-# Passes the Previous Range Pairs to a function that performs Marzullo's
-## Algorithm and prints out the resulting 'improved' precision result.
+# Passes the Precision Range Pairs to a function that performs Marzullo's
+## Algorithm and returns the resulting new range.
 # New Precision is now also printed (found by taking the difference between the
 ## upper and lower bound of the new range and dividing in half)
-# Writes Date, Time, Temp, and Humidity Readings to CSV file. Currently
-## appends each new set of values to the next line of the CSV file.
-## A new log file is created each day.
+# Median value of the new range is also found
+# Lower and Upper bounds of new range is used to test against LED triggers
+# Writes Date, Time, Temp, and Humidity Readings, Sensor Status, and LED states
+## to CSV file. Currently appends each new set of values to the next line of the
+## CSV file.
+# A new log file is created each day.
 # If humidity has an absolute change of greater than 10% per hour, Alert is
 ## triggered.
 # Alert is produced if current light exposure is greater than 200 lux
 # Alert is produced if daily light exposure greater than 1000 lux hours
 # Debug Mode implemented: If debug set to 1, print states will execute to aid in
 ## debugging.
-# Alert is produced when any sensor in a series fails
+# Alert is produced when any sensor in a series fails.
 # Alert is produced when a specific sensor series remains down for 3 cycles
+# Overall Loop is intended to run once per minute. For demonstration purposes,
+## the sleep time at the end of the loop can be changed to run more frquently
 #
-# Questions:
-# How often should readings be taken and should the 'loop' take place in this
-## script or should another script run the loop and call this one within it?
-# Should the code that triggers the LEDs based on the current readings be
-## in a seperate script or should everything be in this script?
-# For the result from Marzullo's Algorithm, should the range remain, or should
-## the median value be taken?
+# Customizing Functionality:
+## Sensor Thresholds have been set as variable values to allow easy adjustment
+## to suit any implementation.
 
 import time
 import qwiic
@@ -45,6 +46,7 @@ _DEFAULT_NAME = "Qwiic Mux"
 _AVAILABLE_I2C_ADDRESS = [*range(0x70,0x77 + 1)]
 
 # Sets Debug Mode (1 = On)
+## Set to 0 to disable Print Statements
 debug = 1
 
 # LED GPIO
@@ -79,19 +81,36 @@ luxHRs = 0
 # Loop Counter
 count = 0
 
-## Indicates current status of each sensor series (1-3)
-## Set to 1 each time sensor is down, triggers LED at 1
+# Indicates current status of each sensor series (1-3)
+# Set to 1 each time sensor is down, triggers LED at 1
 sensor_error = [0, 0, 0]
-## Indicates historic status of each sensor series (1-3)
-## Increments when sensor_error is 1, triggers LED at 3
+# Indicates historic status of each sensor series (1-3)
+# Increments when sensor_error is 1, triggers LED at 3
 sensor_down = [0, 0, 0]
 
 # List for Humidity Values over hour period to check for >10% change
 ## 1 reading per minute = 60 readings per hour
 hum_over_hour = [None] * 60
 
+# Sensor Thresholds based on Specifications
+## Temperature Thresholds (degrees Celsius)
+temp_lh = 20    # low/hard threshold
+temp_ls = 20.5  # low/soft threshold
+temp_hs = 21.5  # high/soft threshold
+temp_hh = 22    # high/hard threshold
+## Relative Humidity Thresholds (Percentage)
+hum_lh = 35.0   # low/hard threshold
+hum_ls = 40.0   # low/soft threshold
+hum_hs = 50.0   # high/soft threshold
+hum_hh = 55.0   # high/hard threshold
+hum_hrch = 10   # low/hard threshold
+## Lux & LuxHrs Thresholds
+lux_max = 200
+luxhr_max = 1000
+
 # Instantiates an object for the MUX
-test = qwiic.QwiicTCA9548A()
+mux = qwiic.QwiicTCA9548A()
+
 
 # Runs Marzullo's Algorithm on a set of data pairs
 # Returns the smallest interval consistent with largest number of sources
@@ -99,15 +118,38 @@ test = qwiic.QwiicTCA9548A()
 ## N = The number of pairs sent (The length)
 ## t = The type of data, used for formatting the output
 def marzulloAlgorithm(intervals,N,t):
-    l = intervals[0][0]
-    r = intervals[0][1]
+    m_left = intervals[0][0]
+    m_right = intervals[0][1]
 
-    for i in range(1,N):
-        if (intervals[i][0] > r or intervals[i][1] < l):
-            continue
-        else:
-            l = max(l, intervals[i][0])
-            r = min(r, intervals[i][1])
+    #if debug == 1:
+    #    print("Values received by Marzullo")
+    #    for x in range(0,N):
+    #        print("[",intervals[x][0],", ",intervals[x][1],"]")
+    #    print("\n")
+
+    m_intersections = 0 #Interval with highest number of intersections
+    for j in range(0,N):
+        l = intervals[j][0]
+        r = intervals[j][1]
+        c_intersections = 0 #Current number of intersections
+
+        # Checking for Intersections of current interval with other intervals
+        for i in range(0,N):
+            if (intervals[i][0] > r or intervals[i][1] < l):
+                # No intersection
+                continue
+            else:
+                l = max(l, intervals[i][0])
+                r = min(r, intervals[i][1])
+                c_intersections = c_intersections + 1
+
+        if c_intersections > m_intersections:
+            m_intersections = c_intersections
+            m_left = l
+            m_right = r
+
+
+
     if debug == 1:
         if (t == 0):
             print("[%0.1f" % l,", %0.1f" % r,"]")
@@ -116,7 +158,7 @@ def marzulloAlgorithm(intervals,N,t):
         else:
             print("[",l,", ",r,"]")
 
-    return l, r
+    return m_left, m_right
 
 # Writes data to a CSV log file. If file doesn't exist a new one is created
 ## dataList = data to append to next line of CSV log file
@@ -125,7 +167,7 @@ def logWrite(dataList):
     dateObj = dateTimeObj.date()
     currentDate = dateObj.strftime("%b-%d-%Y")
     file = "sensor_log_"+currentDate+".csv"
-    headers = ['Date', 'Time Stamp', 'Temperature', 'Relative Humidity', 'Current Lux', 'Cumulative Lux Hours', 'Series 1', 'Series 2', 'Series 3']
+    headers = ['Date', 'Time Stamp', 'Temperature', 'Relative Humidity', 'Current Lux', 'Cumulative Lux Hours', 'Series 1', 'Series 2', 'Series 3', 'LED01', 'LED02', 'LED03', 'LED04', 'LED05', 'LED06', 'LED07', 'LED08', 'LED09', 'LED10', 'LED11', 'LED12', 'LED13', 'LED14', 'LED15', 'LED16', 'LED17']
 
     # Checking if Log file exists
     if not os.path.exists(file):
@@ -155,7 +197,7 @@ def logWrite(dataList):
 ## chan = the MUX channel to enable/disable and read in sensor data from
 def readSensors(chan):
     # Enable MUX channel 'chan' to read the set of sensors
-    test.enable_channels(chan)
+    mux.enable_channels(chan)
     # Read the data from the LTR390 and HTU31D sensors
     i2c = board.I2C()
     ## 1 = sensor is up, 0 = sensor is down
@@ -188,6 +230,7 @@ def readSensors(chan):
     #If either sensor is down, treat whole series as down
     if (ltr_status == 0) or (htu_status == 0):
         up_down = 1
+        #Troubleshooting Edit
         temperature = 0
         relative_humidity = 0
         lux = 0
@@ -219,14 +262,20 @@ def readSensors(chan):
             if debug == 1:
                 # Print UV Sensor Readings for Debugging Purposes
                 #EDIT 03: Formatted output of non-saved values for readability
-                print("UV: %0.1f", % ltr.uvs, "\t\tAmbient Light: %0.1f", % ltr.light)
-                print("UVI: %0.1f", % ltr.uvi, "\t\tLux: %0.1f", % lux)
+                print("UV: %0.1f" % ltr.uvs, "\t\tAmbient Light: %0.1f" % ltr.light)
+                print("UVI: %0.1f" % ltr.uvi, "\t\tLux: %0.1f" % lux)
         else:
             lux = 0
 
     # Disable MUX channel
-    test.disable_channels(chan)
+    mux.disable_channels(chan)
+
     # Return Sensor Readings
+    if debug == 1:
+        print("returning lux as %0.1f" % lux)
+        print("returning temp as %0.1f C" % temperature)
+        print("returning hum as %0.1f%%" % relative_humidity)
+
     return temperature, relative_humidity, lux, up_down
 
 def led_setup():
@@ -252,11 +301,27 @@ def led_cleanup():
 
 
 # Disable all channels for fresh start
-test.disable_all()
+mux.disable_all()
 led_setup()
 
 try:
     while True:
+
+        ########################################################################
+        # Sensor Reading Stage:                                                #
+        # Each Sensor Series is read by opoening the relevant mux channel,     #
+        # reading in the data, then closing the channel and returning the data #
+        # to the main script.                                                  #
+        # Each set of readings is then adjusted into an upper and lower bound  #
+        # based on the known precision of the sensors. Then added as a pair to #
+        # a list of tuples. One list each for temp, humidity and lux           #
+        # The up/down status of the sensors is also returned. If one sensor in #
+        # a series is down, the entire series is treated as down for the rest  #
+        # of the loop.                                                         #
+        # More sensor series can be used by adding additional blocks           #
+        # (3 Currently in use), Current Mux suports 8                          #
+        ########################################################################
+
         # Read Sensors from first channel and account for precision error
         temperature, relative_humidity, lux, sensor_error[0] = readSensors(0)
         if (sensor_error[0] == 0):
@@ -287,16 +352,30 @@ try:
         hum_intervals.append([float(relative_humidity) - 2, float(relative_humidity) + 2])
         lux_intervals.append([float(lux) - float(lux/10), float(lux) + float(lux/10)])
 
-
+        ########################################################################
+        # Marzullo's Algorithm Stage:                                          #
+        #
+        # #
+        # #
+        ########################################################################
 
         if debug == 1:
             print("\nApplying Marzullo's Algorithm returns the following results: ")
 
         # Running Marzullo's Algorithm on Lux Readings
         N = len(lux_intervals)
+
         if (sensor_error[0]+sensor_error[1]+sensor_error[2] < 2):
+            if debug == 1:
+                print("Less than 2 sensors down.")
+                print("Sending the following values to Marzullo")
+                for x in range(0,N):
+                    print("[",lux_intervals[x][0],", ",lux_intervals[x][1],"]")
+                print("\n")
             lowL, highL = marzulloAlgorithm(lux_intervals, N, 2)
         else:
+            if debug == 1:
+                print("2 or more sensors down.")
             lowL = lux_intervals[0][0]+lux_intervals[1][0]+lux_intervals[2][0]
             highL = lux_intervals[0][1]+lux_intervals[1][1]+lux_intervals[2][1]
         # Finding Median value
@@ -347,140 +426,215 @@ try:
 
             print("\n")
 
+        ########################################################################
+        # LED/Actuator Driver Stage:                                           #
+        # Values found using Marzullo's Algorithm are compared against the set #
+        # thresholds. If they exceed the threshold, the relevant LED is set to #
+        # high. Else it is set back to low.                                    #
+        # LED status is also recorded to be written to the Log file.           #
+        ########################################################################
+
         # Testing Marzullo Output against Thresholds to determine if alert is triggered
+        #EDIT #: Added list to hold LED status for Log file
+        led_log = ["0"] * 17
         #EDIT 04: Fixed Swapped LED Print Statements
-        if (lowT < 20.5):
+
+        # Is temperature below soft or hard thresholds.
+        ## LED HIGH if yes. LED LOW if no
+        if (lowT < temp_ls):
             GPIO.output(led_temp_ltsoft, GPIO.HIGH)
+            led_log[2] = "1"
             if debug == 1:
                 print("Below Soft Range of Acceptable Temp, LED03 On")
-            if (lowT < 20):
+            if (lowT < temp_lh):
                 GPIO.output(led_temp_lthard, GPIO.HIGH)
+                led_log[3] = "1"
                 if debug == 1:
                     print("Below Hard Range of Acceptable Temp, LED04 On")
             else:
                 GPIO.output(led_temp_lthard, GPIO.LOW)
+                led_log[3] = "0"
         else:
             GPIO.output(led_temp_ltsoft, GPIO.LOW)
-        if (highT > 21.5):
+            led_log[2] = "1"
+
+        # Is temperature above soft or hard thresholds.
+        ## LED HIGH if yes. LED LOW if no
+        if (highT > temp_hs):
             GPIO.output(led_temp_gtsoft, GPIO.HIGH)
+            led_log[1] = "1"
             if debug == 1:
                 print("Above Soft Range of Acceptable Temp, LED02 On")
-            if (highT > 22):
+            if (highT > temp_hh):
                 GPIO.output(led_temp_gthard, GPIO.HIGH)
+                led_log[0] = "1"
                 if debug == 1:
                     print("Above Hard Range of Acceptable Temp, LED01 On")
             else:
                 GPIO.output(led_temp_gthard, GPIO.LOW)
+                led_log[0] = "0"
         else:
             GPIO.output(led_temp_gtsoft, GPIO.LOW)
-        if (lowH < 40.0):
+            led_log[1] = "0"
+
+        # Is relative humidity below soft or hard thresholds.
+        ## LED HIGH if yes. LED LOW if no
+        if (lowH < hum_ls):
             GPIO.output(led_hum_ltsoft, GPIO.HIGH)
+            led_log[6] = "1"
             if debug == 1:
                 print("Below Soft Range of Acceptable Relative Humidity, LED07 On")
-            if (lowH < 25.0):
+            if (lowH < hum_lh):
                 GPIO.output(led_hum_lthard, GPIO.HIGH)
+                led_log[7] = "1"
                 if debug == 1:
                     print("Below Hard Range of Acceptable Relative Humidity, LED08 On")
             else:
                 GPIO.output(led_hum_lthard, GPIO.LOW)
+                led_log[7] = "0"
         else:
             GPIO.output(led_hum_ltsoft, GPIO.LOW)
-        if (highH > 50.0):
+            led_log[6] = "0"
+
+        # Is relative humidity above soft or hard thresholds.
+        ## LED HIGH if yes. LED LOW if no
+        if (highH > hum_hs):
             GPIO.output(led_hum_gtsoft, GPIO.HIGH)
+            led_log[5] = "1"
             if debug == 1:
                 print("Above Soft Range of Acceptable Relative Humidity, LED06 On")
-            if (highH > 65.0):
+            if (highH > hum_hh):
                 GPIO.output(led_hum_gthard, GPIO.HIGH)
+                led_log[4] = "1"
                 if debug == 1:
                     print("Above Hard Range of Acceptable Relative Humidity, LED05 On")
             else:
                 GPIO.output(led_hum_gthard, GPIO.LOW)
+                led_log[4] = "0"
         else:
             GPIO.output(led_hum_gtsoft, GPIO.LOW)
+            led_log[5] = "0"
 
-        # If hum_over_hour list still has 'None' values
-        if count < 60:
+        # Has relative humidity changed more than 10% in 1 hr
+        ## LED HIGH if yes. LED LOW if no
+        if count < 60: # If hum_over_hour list still has 'None' values
             for x in range(count):
-                if abs(hum_over_hour[x] - medianH) > 10:
+                if abs(hum_over_hour[x] - medianH) > hum_hrch:
                     GPIO.output(led_hum_chng, GPIO.HIGH)
+                    led_log[8] = "1"
                     if debug == 1:
                         print("Relative Humidity has changed more than 10% within an hour, LED09 On")
                         break
         else: # Code has run for more than an hour so safe to compare all items in list
             for x in hum_over_hour:
-                if abs(x - medianH) > 10:
+                if abs(x - medianH) > hum_hrch:
                     GPIO.output(led_hum_chng, GPIO.HIGH)
+                    led_log[8] = "1"
                     if debug == 1:
                         print("Relative Humidity has changed more than 10% within an hour, LED09 On")
                 #else:
                 #    if debug == 1:
                 #        print("Relative Humidity change is within threshold")
 
-        if (lowL > 200) or (highL > 200):
+        # Has Lux exceeded threshold in single reading
+        ## LED HIGH if yes. LED LOW if no
+        if (lowL > lux_max) or (highL > lux_max):
             GPIO.output(led_lux_gt, GPIO.HIGH)
+            led_log[9] = "1"
             if debug == 1:
                 print("Above Acceptable Level of Lux, LED10 On")
         else:
             GPIO.output(led_lux_gt, GPIO.LOW)
-        if (luxHRs > 1000):
+            led_log[9] = "0"
+
+        # Has Luxhr exceeded threshold in 24hr period
+        ## LED HIGH if yes. LED LOW if no
+        if (luxHRs > luxhr_max):
             GPIO.output(led_luxhr_gt, GPIO.HIGH)
+            led_log[10] = "1"
             if debug == 1:
                 print("Above Acceptable Level of Lux Hours within 24 hours, LED11 On")
         else:
             GPIO.output(led_luxhr_gt, GPIO.LOW)
+            led_log[10] = "0"
 
+        # Are Sensors Down for current cycle
+        ## LED HIGH if yes. LED LOW if no
+
+        ## Checking Sensor Series 1 Status
         if sensor_error[0] == 1:
             GPIO.output(led_s01_err, GPIO.HIGH)
+            led_log[11] = "1"
             if debug == 1:
                 print("Sensor Series 1 down, LED12 On")
         else:
             GPIO.output(led_s01_err, GPIO.LOW)
+            led_log[11] = "0"
+
+        ## Checking Sensor Series 2 Status
         if sensor_error[1] == 1:
             GPIO.output(led_s02_err, GPIO.HIGH)
+            led_log[12] = "0"
             if debug == 1:
                 print("Sensor Series 2 down, LED13 On")
         else:
             GPIO.output(led_s02_err, GPIO.LOW)
+            led_log[12] = "0"
+
+        ## Checking Sensor Series 3 Status
         if sensor_error[2] == 1:
             GPIO.output(led_s03_err, GPIO.HIGH)
+            led_log[13] = "1"
             if debug == 1:
                 print("Sensor Series 3 down, LED14 On")
         else:
             GPIO.output(led_s03_err, GPIO.LOW)
+            led_log[13] = "0"
 
+        ## Have sensors been down for 3 consecutive cycles?
+        ## LED HIGH if yes. Does not reset once triggered.
+
+        ## Checking Sensor Series 1
         if sensor_down[0] >= 3:
             GPIO.output(led_s01_dwn, GPIO.HIGH)
+            led_log[14] = "1"
             if debug == 1:
                 print("Sensor Series 1 down 3 times in a row, LED15 On")
+
+        ## Checking Sensor Series 2
         if sensor_down[1] >= 3:
             GPIO.output(led_s02_dwn, GPIO.HIGH)
+            led_log[15] = "1"
             if debug == 1:
                 print("Sensor Series 2 down 3 times in a row, LED16 On")
+
+        ## Checking Sensor Series 3
         if sensor_down[2] >= 3:
             GPIO.output(led_s03_dwn, GPIO.HIGH)
+            led_log[16] = "1"
             if debug == 1:
                 print("Sensor Series 3 down 3 times in a row, LED17 On")
 
         # Disabling Channels to ensure fresh start in next loop
-        test.disable_all()
+        mux.disable_all()
 
         # Getting Date/Time info for logging
         dateTimeObj = datetime.now()
         timeObj = dateTimeObj.time()
         dateObj = dateTimeObj.date()
 
-        # Setting Valus for Sensor Status In Log file
-        senor_log = [None] * len(sensor_error)
+        # Setting Values for Sensor Status In Log file
+        sensor_log = [None] * len(sensor_error)
         stat_count = 0
         for x in sensor_error:
             if x == 0:
                 sensor_log[stat_count] = "Up"
-            else
+            else:
                 sensor_log[stat_count] = "Down"
             stat_count = stat_count + 1
 
         # Formatting data and writing it to log file.
-        list = [dateObj.strftime("%b-%d-%Y"), timeObj.strftime("%H:%M:%S.%f"), medianT, medianH, medianL, luxHRs, sensor_log[0], sensor_log[1], sensor_log[2]]
+        list = [dateObj.strftime("%b-%d-%Y"), timeObj.strftime("%H:%M:%S.%f"), medianT, medianH, medianL, luxHRs, sensor_log[0], sensor_log[1], sensor_log[2],led_log]
         logWrite(list)
 
         #Increase Loop Count at end of loop
