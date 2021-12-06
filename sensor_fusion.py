@@ -394,6 +394,7 @@ try:
             luxHRs = 0
         #luxHRs = luxHRs + avgLux
         luxHRs = luxHRs + medianL
+        luxHRs = round(luxHRs, 2)
         if debug == 1:
             print("\tCumulative Lux Hours is: ", luxHRs)
 
