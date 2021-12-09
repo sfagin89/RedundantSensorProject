@@ -96,7 +96,7 @@ If the 'friction' connection for the Qwiic SHIM isn't maintaining a consistent c
 When assembled, the project should match the design shown below:
 ![Overall Schematic](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/EC545_schematic_bb.png?raw=true)
 <p align="center">
-  <img height="50%" src="https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/EC545_schematic_bb.png">
+  <img height="1250" src="https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/EC545_schematic_bb.png">
 </p>
 
 ## Setting Up the Raspberry Pi
