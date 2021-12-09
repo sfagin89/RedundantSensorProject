@@ -28,7 +28,7 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
   * I2C Address: 0x53
 ### Assembly
 The remainder of this guide and the provided code assumes the Pi, Sensors, and LEDs have been assembled following these instructions:
-  * Raspberry Pi 4 GPIO Pinout ![RPI4 GPIO Pinout Diagram](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/RPi4_GPIO_pinout_diagram.png?raw=true)
+  * Raspberry Pi 4 GPIO Pinout [RPI4 GPIO Pinout Diagram](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/RPi4_GPIO_pinout_diagram.png)
   * (PIN 37) GPIO 26 -> LED01 (Red)
   * (PIN 40) GPIO 21 -> LED02 (Orange)
   * (PIN 35) GPIO 19 -> LED03 (Green)
@@ -47,6 +47,7 @@ The remainder of this guide and the provided code assumes the Pi, Sensors, and L
   * (PIN 18) GPIO 24 -> LED16 (Red)
   * (PIN 16) GPIO 23 -> LED17 (Red)
   * (PIN 39) -> Ground
+
 If the 'friction' connection for the Qwiic SHIM isn't maintaining a consistent connection, I'd recommend soldering a set of jumpers to the SHIM and connect it to the GPIO via jumper wires, using the following Pinouts
   * (PIN 01) -> 3.3v
   * (PIN 02) -> 5v
