@@ -7,6 +7,10 @@ The goal of this project was to demonstrate the concept of Sensor Fusion as a me
 
 The images below displays the results of Marzullo's Algorithm applied to the set of 3 UV Light sensors. The LTR390 Sensor has a known precision error of +/- 10%. After running through the MarzulloAlgorithm function, the new precision error of the result is +/- 7.7%.
 
+<p align="center">
+  <img src="https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/Marzullo_Applied_to_Light_Sensor.png">
+</p>
+
 ![Marzullo's Algorithm Applied to LUX Readings](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/Marzullo_Applied_to_Light_Sensor.png?raw=true)
 
 ![Marzullo's Algorithm Demonstrated via Line Graph](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/Marzullo_Applied_Line_Graph.png?raw=true)
