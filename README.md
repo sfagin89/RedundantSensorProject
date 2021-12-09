@@ -27,8 +27,8 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
   * 2x Qwiic Connectors
   * I2C Address: 0x53
 ### Assembly
-* The remainder of this guide and the provided code assumes the Pi, Sensors, and LEDs have been assembled following these instructions:
-  <img align="right" src="https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/RPi4_GPIO_pinout_diagram.png">
+The remainder of this guide and the provided code assumes the Pi, Sensors, and LEDs have been assembled following these instructions:
+  <img align="right" width="600" src="https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/RPi4_GPIO_pinout_diagram.png">
   * Raspberry Pi 4 GPIO Pinout
   * GPIO 26 -> LED01 (Red)
   * GPIO 21 -> LED02 (Orange)
