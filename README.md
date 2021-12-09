@@ -1,5 +1,15 @@
-# RedundantSensorProject
+# Redundant Sensor Project
 Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
+
+## Project Overview
+
+The goal of this project was to demonstrate the concept of Sensor Fusion as a method for improving the precision of sensor readings. This was accomplished using Marzullo's Algorithm, which takes a set of intervals, and returns the smallest common intersection between the highest number of intervals possible. A set of 3 UV Light Sensors, and 3 Temperature/Humidity Sensors were used to demonstrate the effectiveness of Marzullo's Algorithm in reducing the precision error of a sensor reading.
+
+The images below displays the results of Marzullo's Algorithm applied to the set of 3 UV Light sensors. The LTR390 Sensor has a known precision error of +/- 10%. After running through the MarzulloAlgorithm function, the new precision error of the result is +/- 7.7%.
+
+![Marzullo's Algorithm Applied to LUX Readings](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/Marzullo_Applied_to_Light_Sensor.png?raw=true)
+
+![Marzullo's Algorithm Demonstrated via Line Graph](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/Marzullo_Applied_Line_Graph.png?raw=true)
 
 ## Hardware Setup
 ### Parts List
@@ -28,7 +38,8 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
   * I2C Address: 0x53
 ### Assembly
 The remainder of this guide and the provided code assumes the Pi, Sensors, and LEDs have been assembled following these instructions:
-  * Raspberry Pi 4 GPIO Pinout, refer to [this diagram](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/RPi4_GPIO_pinout_diagram.png) for a visual pinout.
+
+#### Raspberry Pi 4 GPIO Pinout, refer to [this diagram](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/RPi4_GPIO_pinout_diagram.png) for a visual pinout.
   * (PIN 37) GPIO 26 -> LED01 (Red)
   * (PIN 40) GPIO 21 -> LED02 (Orange)
   * (PIN 35) GPIO 19 -> LED03 (Green)
@@ -55,6 +66,9 @@ If the 'friction' connection for the Qwiic SHIM isn't maintaining a consistent c
   * (PIN 04) -> 5v
   * (PIN 05) -> I2C SC
   * (PIN 06) -> Ground
+
+#### Breadboard LED Layout
+![LED Layout for Breadboard](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/Breadboard_LED_Layout.png?raw=true)
 
 ## Setting Up the Raspberry Pi
 ### Imaging the SD Card:
