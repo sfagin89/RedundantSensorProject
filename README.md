@@ -1,6 +1,10 @@
 # Redundant Sensor Project
 Repo for the Redundant Archival Preservation System using Sensor Fusion
 
+<p align="center">
+  <img src="https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/Final_Layout.jpg">
+</p>
+
 ## Project Overview
 
 This project is intended to be used as a redundant sensor application, applying Marzullo's Algorithm to improve the precision error of sensor readings. The focus is on monitoring environmental conditions in relation to preserving archival material, however it can be used in many other scenarios, as the sensor thresholds are easily changed depending on your requirements, as well as swapping out the Temperature/Humidity and UV/Light sensors used in this project for other sensors.
