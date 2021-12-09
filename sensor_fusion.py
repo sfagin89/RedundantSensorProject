@@ -94,38 +94,38 @@ hum_over_hour = [None] * 60
 
 # Sensor Thresholds based on Specifications
 ## Temperature Thresholds (degrees Celsius)
-#temp_lh = 20    # low/hard threshold
-#temp_ls = 20.5  # low/soft threshold
-#temp_hs = 21.5  # high/soft threshold
-#temp_hh = 22    # high/hard threshold
+temp_lh = 20    # low/hard threshold
+temp_ls = 20.5  # low/soft threshold
+temp_hs = 21.5  # high/soft threshold
+temp_hh = 22    # high/hard threshold
 ## Relative Humidity Thresholds (Percentage)
-#hum_lh = 35.0   # low/hard threshold
-#hum_ls = 40.0   # low/soft threshold
-#hum_hs = 50.0   # high/soft threshold
-#hum_hh = 55.0   # high/hard threshold
-#hum_hrch = 10   # low/hard threshold
-## Lux & LuxHrs Thresholds
-#lux_max = 200
-#luxhr_max = 1000
-
-# Sensor Thresholds based on Demo Requirement
-temp_baseline = 0#current room value
-hum_baseline = 0#current room value
-lux_baseline = 0#current room value
-## Temperature Thresholds (degrees Celsius)
-temp_lh = temp_baseline + 4    # low/hard threshold
-temp_ls = temp_baseline + 8  # low/soft threshold
-temp_hs = temp_baseline + 12  # high/soft threshold
-temp_hh = temp_baseline + 16    # high/hard threshold
-## Relative Humidity Thresholds (Percentage)
-hum_lh = 10   # low/hard threshold
-hum_ls = -5   # low/soft threshold
-hum_hs = +10   # high/soft threshold
-hum_hh = +15   # high/hard threshold
+hum_lh = 35.0   # low/hard threshold
+hum_ls = 40.0   # low/soft threshold
+hum_hs = 50.0   # high/soft threshold
+hum_hh = 55.0   # high/hard threshold
 hum_hrch = 10   # low/hard threshold
 ## Lux & LuxHrs Thresholds
-lux_max = lux_baseline * 5
-luxhr_max = lux_baseline * 10
+lux_max = 200
+luxhr_max = 1000
+
+# Sensor Thresholds based on Demo Requirement
+#temp_baseline = 0#current room value
+#hum_baseline = 0#current room value
+#lux_baseline = 0#current room value
+## Temperature Thresholds (degrees Celsius)
+#temp_lh = temp_baseline + 4    # low/hard threshold
+#temp_ls = temp_baseline + 8  # low/soft threshold
+#temp_hs = temp_baseline + 12  # high/soft threshold
+#temp_hh = temp_baseline + 16    # high/hard threshold
+## Relative Humidity Thresholds (Percentage)
+#hum_lh = 10   # low/hard threshold
+#hum_ls = -5   # low/soft threshold
+#hum_hs = +10   # high/soft threshold
+#hum_hh = +15   # high/hard threshold
+#hum_hrch = 10   # low/hard threshold
+## Lux & LuxHrs Thresholds
+#lux_max = lux_baseline * 5
+#luxhr_max = lux_baseline * 10
 
 # Instantiates an object for the MUX
 mux = qwiic.QwiicTCA9548A()
