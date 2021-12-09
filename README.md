@@ -5,7 +5,7 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
 
 The goal of this project was to demonstrate the concept of Sensor Fusion as a method for improving the precision of sensor readings. This was accomplished using Marzullo's Algorithm, which takes a set of intervals, and returns the smallest common intersection between the highest number of intervals possible. A set of 3 UV Light Sensors, and 3 Temperature/Humidity Sensors were used to demonstrate the effectiveness of Marzullo's Algorithm in reducing the precision error of a sensor reading.
 
-The images below displays the results of Marzullo's Algorithm applied to the set of 3 UV Light sensors. The LTR390 Sensor has a known precision error of +/- 10%. After running through the MarzulloAlgorithm function, the new precision error of the result is +/- 7.7%.
+The images below display the results of Marzullo's Algorithm when applied to a set of 3 UV Light sensor readings. The LTR390 Sensor has a known precision error of +/- 10%[^3]. After running through the MarzulloAlgorithm function, the new precision error of the result is +/- 7.7%.
 
 <p align="center">
   <img src="https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/Marzullo_Applied_to_Light_Sensor.png">
@@ -14,6 +14,10 @@ The images below displays the results of Marzullo's Algorithm applied to the set
 <p align="center">
   <img src="https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/Marzullo_Applied_Line_Graph.png">
 </p>
+
+## Specifications
+
+
 
 ## Hardware Setup
 ### Parts List
@@ -278,3 +282,4 @@ If the 'friction' connection for the Qwiic SHIM isn't maintaining a consistent c
 
 [^1]: https://downloads.raspberrypi.org/raspios_armhf/images/
 [^2]: https://rufus.ie/en/
+[^3]: https://optoelectronics.liteon.com/upload/download/DS86-2015-0004/LTR-390UV_Final_%20DS_V1%201.pdf
