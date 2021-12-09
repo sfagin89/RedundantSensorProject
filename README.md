@@ -94,10 +94,7 @@ If the 'friction' connection for the Qwiic SHIM isn't maintaining a consistent c
 ### Overall Layout
 
 When assembled, the project should match the design shown below:
-![Overall Schematic](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/EC545_schematic_bb.png?raw=true)
-<p align="center">
-  <img height="1250" src="https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/EC545_schematic_bb.png">
-</p>
+![Overall Schematic](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/EC545_schematic_bb.png?raw=true | width=50)
 
 ## Setting Up the Raspberry Pi
 ### Imaging the SD Card:
