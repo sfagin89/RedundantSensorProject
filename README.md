@@ -19,8 +19,8 @@ The images below display the results of Marzullo's Algorithm when applied to a s
 
 For the Archival Preservation System, the setting of an Archival Library was chosen to model the environmental requirements off of[^4]. Research into the recommended environmental conditions led to the following specifications for this project:
 * Temperature & Humidity
-  * Hard Temperature Thresholds of 20-22\xB0C
-    * An early warning threshold of 20.5-21.5\xB0C was implemented as well.
+  * Hard Temperature Thresholds of 20-22 Degrees Celsius
+    * An early warning threshold of 20.5-21.5 Degrees Celsius was implemented as well.
   * Hard Humidity Thresholds of 35-55% Relative Humidity
     * An early warning threshold of 40-50% Relative Humidity was implemented as well.
   * Humidity should not change more than 10% per hour.
