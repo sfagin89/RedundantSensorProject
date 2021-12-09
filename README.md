@@ -1,11 +1,11 @@
 # Redundant Sensor Project
-Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
+Repo for the Redundant Archival Preservation System using Sensor Fusion
 
 ## Project Overview
 
-In this project, a redundant environment monitoring system was designed. It's intended use is for the preservation of paper and ink based materials, such as books, painting or scrolls. The goal of this project was to illustrate the concept of Sensor Fusion as a method for improving the precision of sensor readings. This was accomplished using Marzullo's Algorithm, which takes a set of intervals, and returns the smallest common intersection between the highest number of intervals possible. A set of 3 UV Light Sensors, and 3 Temperature/Humidity Sensors were used to demonstrate the effectiveness of Marzullo's Algorithm in reducing the precision error of a sensor reading through redundant readings.
+This project is intended to be used as a redundant sensor application, applying Marzullo's Algorithm to improve the precision error of sensor readings. The focus is on monitoring environmental conditions in relation to preserving archival material, however it can be used in many other scenarios, as the sensor thresholds are easily changed depending on your requirements, as well as swapping out the Temperature/Humidity and UV/Light sensors used in this project for other sensors.
 
-The images below display the results of Marzullo's Algorithm when applied to a set of 3 UV Light sensor readings. The LTR390 Sensor has a known precision error of +/- 10%[^3]. After running through the MarzulloAlgorithm function, the new precision error of the result is +/- 7.7%.
+The images below display the results of Marzullo's Algorithm when applied to a set of 3 UV Light sensor readings. The LTR390 Sensor has a known precision error of +/- 10%[^3]. After running through the script's MarzulloAlgorithm function, the new precision error of the result is +/- 7.7%.
 
 <p align="center">
   <img src="https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/Marzullo_Applied_to_Light_Sensor.png">
@@ -15,18 +15,21 @@ The images below display the results of Marzullo's Algorithm when applied to a s
   <img src="https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/Marzullo_Applied_Line_Graph.png">
 </p>
 
-## Specifications
+## Thresholds
 
-For the Archival Preservation System, the setting of an Archival Library was chosen to model the environmental requirements off of[^4]. Research into the recommended environmental conditions led to the following specifications for this project:
+The threshold values used to compare against the sensor readings and trigger LED alerts are set at the top of the script as a series of global variables. To change which level of sensor readings the application should react to, these threshold values are what need to be adjusted. Listed below are the current threshold settings, designed after researching the recommended environmental conditions for storing paper and ink based items[^4][^5].
+
 * Temperature & Humidity
   * Hard Temperature Thresholds of 20-22 Degrees Celsius
-    * An early warning threshold of 20.5-21.5 Degrees Celsius was implemented as well.
+    * Soft Temperature Thresholds of 20.5-21.5 Degrees Celsius was implemented as well.
   * Hard Humidity Thresholds of 35-55% Relative Humidity
-    * An early warning threshold of 40-50% Relative Humidity was implemented as well.
+    * Soft Humidity Thresholds of 40-50% Relative Humidity was implemented as well.
   * Humidity should not change more than 10% per hour.
 * Light Levels
   * Light exposure should not exceed 200 Lux in a single instance.
   * Light exposure over an period of 24 hours should not exceed 1000 Lux Hours.
+
+Note: The soft thresholds are meant to act as an early warning system as the sensor readings approach the outer range of the recommended conditions.
 
 ## Hardware Setup
 ### Parts List
@@ -53,6 +56,7 @@ For the Archival Preservation System, the setting of an Archival Library was cho
   * https://learn.adafruit.com/adafruit-ltr390-uv-sensor/python-circuitpython
   * 2x Qwiic Connectors
   * I2C Address: 0x53
+
 ### Assembly
 The remainder of this guide and the provided code assumes the Pi, Sensors, and LEDs have been assembled following these instructions:
 
@@ -86,6 +90,11 @@ If the 'friction' connection for the Qwiic SHIM isn't maintaining a consistent c
 
 #### Breadboard LED Layout
 ![LED Layout for Breadboard](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/Breadboard_LED_Layout.png?raw=true)
+
+### Overall Layout
+
+When assembled, the project should match the design shown below:
+![Overall Schematic](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/EC545_schematic_bb.png?raw=true)
 
 ## Setting Up the Raspberry Pi
 ### Imaging the SD Card:
@@ -289,7 +298,17 @@ If the 'friction' connection for the Qwiic SHIM isn't maintaining a consistent c
     Channel 7: Disabled
     ````
 
+## Running the Application
+
+* Navigate to the directory with the sensor_fusion.py script.
+* Run the following command
+  * ```python3 sensor_fusion.py```
+* If debug mode is enabled (debug = 1), then the results of the sensor readings, the output of Marzullo's Algorithm on those readings, as well as text indicators on which LED alerts have been triggered, will print to the terminal.
+* Additionally, if one doesn't already exist, a new log file will be created for that day. A new log file will be created each day that the script is run.
+* Use Ctrl + C to exit the application.
+
 [^1]: https://downloads.raspberrypi.org/raspios_armhf/images/
 [^2]: https://rufus.ie/en/
 [^3]: https://optoelectronics.liteon.com/upload/download/DS86-2015-0004/LTR-390UV_Final_%20DS_V1%201.pdf
 [^4]: https://www.artic.edu/library/discover-our-collections/research-guides/appraisal-and-preservation-resources-for-books
+[^5]: https://ccaha.org/resources/light-exposure-artifacts-exhibition
