@@ -28,7 +28,7 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
   * I2C Address: 0x53
 ### Assembly
 The remainder of this guide and the provided code assumes the Pi, Sensors, and LEDs have been assembled following these instructions:
-  * Raspberry Pi 4 GPIO Pinout [RPI4 GPIO Pinout Diagram](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/RPi4_GPIO_pinout_diagram.png)
+  * Raspberry Pi 4 GPIO Pinout, refer to [this diagram](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/RPi4_GPIO_pinout_diagram.png) for a visual pinout.
   * (PIN 37) GPIO 26 -> LED01 (Red)
   * (PIN 40) GPIO 21 -> LED02 (Orange)
   * (PIN 35) GPIO 19 -> LED03 (Green)
