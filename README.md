@@ -11,9 +11,9 @@ The images below displays the results of Marzullo's Algorithm applied to the set
   <img src="https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/Marzullo_Applied_to_Light_Sensor.png">
 </p>
 
-![Marzullo's Algorithm Applied to LUX Readings](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/Marzullo_Applied_to_Light_Sensor.png?raw=true)
-
-![Marzullo's Algorithm Demonstrated via Line Graph](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/Marzullo_Applied_Line_Graph.png?raw=true)
+<p align="center">
+  <img src="https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/Marzullo_Applied_Line_Graph.png">
+</p>
 
 ## Hardware Setup
 ### Parts List
