@@ -29,6 +29,7 @@ Repo for EC545 Redundant Archival Preservation System using Sensor Fusion
 ### Assembly
 The remainder of this guide and the provided code assumes the Pi, Sensors, and LEDs have been assembled following these instructions:
   <img align="right" width="200" style="padding-right:50px;" src="https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/RPi4_GPIO_pinout_diagram.png">
+  ![RPi 4 GPIO Pinout Diagram](https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/RPi4_GPIO_pinout_diagram.png?raw=true){: width="200" style="float:right; padding-right:10px"}
   * Raspberry Pi 4 GPIO Pinout
   * GPIO 26 -> LED01 (Red)
   * GPIO 21 -> LED02 (Orange)
