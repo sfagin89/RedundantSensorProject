@@ -7,7 +7,7 @@ Repo for the Redundant Archival Preservation System using Sensor Fusion
 
 A demonstration of this project can be viewed on YouTube.
 
-[![Redundant Archival Preservation System Demo](https://img.youtube.com/vi/ZMbAT5cT7FY/1.jpg)](https://www.youtube.com/watch?v=ZMbAT5cT7FY)
+[![Redundant Archival Preservation System Demo](https://img.youtube.com/vi/ZMbAT5cT7FY/0.jpg)](https://www.youtube.com/watch?v=ZMbAT5cT7FY)
 
 ## Project Overview
 
