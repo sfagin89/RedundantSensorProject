@@ -19,6 +19,8 @@ The images below display the results of Marzullo's Algorithm when applied to a s
   <img src="https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/Marzullo_Applied_Line_Graph.png">
 </p>
 
+A demonstration of this project can be viewed on [YouTube](https://youtu.be/ZMbAT5cT7FY)
+
 ## Thresholds
 
 The threshold values used to compare against the sensor readings and trigger LED alerts are set at the top of the script as a series of global variables. To change which level of sensor readings the application should react to, these threshold values are what need to be adjusted. Listed below are the current threshold settings, designed after researching the recommended environmental conditions for storing paper and ink based items[^4][^5].
