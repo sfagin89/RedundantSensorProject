@@ -37,7 +37,7 @@ Note: The soft thresholds are meant to act as an early warning system as the sen
 
 ## Software
 
-The python script **sensor_fusion.py** runs all aspects of this project. Instructions to run it can be found [HERE](https://github.com/sfagin89/RedundantSensorProject#running-the-application). Non-built in python libraries that must be installed are included in the RPi Setup instructions [HERE](https://github.com/sfagin89/RedundantSensorProject#first-boot-setup)
+The python script **sensor_fusion.py** runs all aspects of this project. Instructions to run it can be found [HERE](https://github.com/sfagin89/RedundantSensorProject#running-the-application). Non built-in python libraries that must be installed are included in the RPi Setup instructions [HERE](https://github.com/sfagin89/RedundantSensorProject#first-boot-setup)
 
 <p align="center">
   <img src="https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/EC545%20High%20Level%20Software%20Diagram.png">
