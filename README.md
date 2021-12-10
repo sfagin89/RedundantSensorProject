@@ -35,6 +35,16 @@ The threshold values used to compare against the sensor readings and trigger LED
 
 Note: The soft thresholds are meant to act as an early warning system as the sensor readings approach the outer range of the recommended conditions.
 
+## Software
+
+The python script **sensor_fusion.py** runs all aspects of this project. Instructions to run it can be found [HERE](https://github.com/sfagin89/RedundantSensorProject#running-the-application). Non-built in python libraries that must be installed are included in the RPi Setup instructions [HERE](https://github.com/sfagin89/RedundantSensorProject#first-boot-setup)
+
+<p align="center">
+  <img src="https://github.com/sfagin89/RedundantSensorProject/blob/main/Images/EC545%20High%20Level%20Software%20Diagram.png">
+</p>
+
+Additional details on how the script works and what can be altered are included in the script comments.
+
 ## Hardware Setup
 ### Parts List
 * 1x Raspberry Pi 4 Model B
@@ -305,6 +315,8 @@ When assembled, the project should match the design shown below:
     ````
 
 ## Running the Application
+
+**IMPORTANT**: The I2C Mux Breakout Board must be connected to the raspberry pi before running this application.
 
 * Navigate to the directory with the sensor_fusion.py script.
 * Run the following command
