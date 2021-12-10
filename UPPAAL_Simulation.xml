@@ -1,0 +1,1292 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_2.dtd'>
+<nta>
+	<declaration>broadcast chan sampling, fusion, varalerts, envcontrol, envupdate; //sequential method
+
+//Assumption is one cycle through the entire set of states in SequentialGen is 1 minute
+
+// Starting conditions for various responses - select one by removing //
+//scaling    1000x        100x       10x
+int temperature=21000, humidity=4500, LUX=10; //perfect temperature and perfect humidity
+//int temperature=18000, humidity=2000, LUX=1000; //low temperature and low humidity
+//int temperature=23000, humidity=2000, LUX=1000; //high temperature and low humidity
+//int temperature=18000, humidity=6000, LUX=1000; //low temperature and high humidity
+//int temperature=23000, humidity=6000, LUX=1000; //high temperature and high humidity
+//Temperature scaled by 1000x, Humidity scaled by 100x, LUX scaled by 10x
+
+// Variables for parameterization
+const int N = 3 ; // # of sets of sensors
+typedef int[0,N-1] id_t;
+int status; //sensor status for each sampling period
+int x[N];  //random fluctuation during sampling
+bool sensor_fail_alert[N]; //single sensor status
+int sensor_consec_alert[N]; //sensor status count
+bool sensor_offline[N]; // sensor status for 3 or more cycles in a row
+int SLUX[N]; //sensor output of LUX
+int TEMP[N]; //sensor output of TEMP
+int HUM[N]; //sensor output of HUM
+int TEMPout, HUMout, LUXout; //output from the sensor fusion FSM
+
+//Define limits for control FSMs
+bool soft_heat, hard_heat, soft_cool, hard_cool, soft_hum, hard_hum, soft_dehum, hard_dehum, LUX_limit; //outputs from various control FSMs
+int soft_heat_bound = 20500, hard_heat_bound = 20000, soft_cooling_bound = 21500, hard_cooling_bound = 22000; //scaled by 1000x -&gt; 20500 = 20.5C
+int LUXLimBound=2000; //scaled by 10x for instant value
+int Luxmin = 6000; //scaled by 100x as 60,000 lux minutes is over the max int value
+int soft_hum_bound = 4000, hard_hum_bound = 3500, soft_dehum_bound = 5000, hard_dehum_bound = 5500; // scaled by 100x -&gt; 4000 = 40%
+int humFluxPosRange = 10000, humFluxNegRange = -10000; // fluctuation range is 10 but scaled by 100
+
+// Variables used for counting and summing variables over multiple transitions
+int counter = 24 * 60/24; // converts the time from 24 hours to mintues becuase we sample onces per minute
+int CurrentTime =0; // variable used to increment time everytime linker transmits a signal
+int LuxSum=0; // variable used to sum all the LUXout values over time to know when the lux hours are met
+int humArray[60];
+int humSlidingWindow = 0;
+int humFluxSum = 0;
+bool humAlert = 0;
+int lowerIdx, upperIdx =0;
+
+
+// Marzullo's Algorithm Declaration - copied from our GitHub to convert from Python to C
+int l,r; //used to find left and right limits of array
+int intervals[3][2]; //these are the correct dimensions (3 sets, with 2 values each)
+int i,j; //counter variables
+
+int marzulloAlgorithm(int val1, int val2, int val3, int type) {
+    int l1, l2, l3, r1, r2, r3, m_left, m_right, m_intersections, c_intersections;
+
+    // type 1 temperature values (+/- 0.2C scaled to +/- 200, 1000X)
+    if (type == 1) {
+        l1 = val1 - 200;
+        l2 = val2 - 200;
+        l3 = val3 - 200;
+        r1 = val1 + 200;
+        r2 = val2 + 200;
+        r3 = val3 + 200;
+    }
+    // type 2 humidity values (+/- 2% RH scaled to +/- 200, 100X)
+    if (type == 2) {
+        l1 = val1 - 200;
+        l2 = val2 - 200;
+        l3 = val3 - 200;
+        r1 = val1 + 200;
+        r2 = val2 + 200;
+        r3 = val3 + 200;
+    }
+    // type 3 lux values (+/- 10% of current lux, no need to scale)
+    if (type == 3) {
+        l1 = val1 - (val1/10);
+        l2 = val2 - (val2/10);
+        l3 = val3 - (val3/10);
+        r1 = val1 + (val1/10);
+        r2 = val2 + (val2/10);
+        r3 = val3 + (val3/10);
+    }
+
+    //Check for multiple down to only return the remaining sensor
+    if (val1==-1 &amp;&amp; val2==-1) {
+        return (r3+l3)/2;
+    }
+    if (val1==-1 &amp;&amp; val3==-1){
+        return (r2+l2)/2;
+    }
+    if (val2==-1 &amp;&amp; val3==-1) {
+        return (r1+l1)/2;
+    }
+
+    // Default order of arrays
+    intervals[0][0] = l1;
+    intervals[0][1] = r1;
+    intervals[1][0] = l2;
+    intervals[1][1] = r2;
+    intervals[2][0] = l3;
+    intervals[2][1] = r3;
+    m_left = l1;
+    m_right = r1;
+
+
+    if (l1 &lt; l2 &amp;&amp; l1 &lt; l3) { //first interval lowest
+        intervals[0][0] = l1;
+        intervals[0][1] = r1;
+        m_left = l1;
+        m_right = r1;
+        if (l2 &lt; l3){
+            intervals[1][0] = l2;
+            intervals[1][1] = r2;
+            intervals[2][0] = l3;
+            intervals[2][1] = r3;
+        }
+        if (l3 &lt; l2){
+            intervals[1][0] = l3;
+            intervals[1][1] = r3;
+            intervals[2][0] = l2;
+            intervals[2][1] = r2;
+        }
+    }
+    if (l2 &lt; l1 &amp;&amp; l2 &lt; l3) { //second interval lowest
+        intervals[0][0] = l2;
+        intervals[0][1] = r2;
+        m_left = l1;
+        m_right = r1;
+        if (l1 &lt; l3){
+            intervals[1][0] = l1;
+            intervals[1][1] = r1;
+            intervals[2][0] = l3;
+            intervals[2][1] = r3;
+        }
+        if (l3 &lt; l1){
+            intervals[1][0] = l3;
+            intervals[1][1] = r3;
+            intervals[2][0] = l1;
+            intervals[2][1] = r1;
+        }
+    }
+    if (l3 &lt; l1 &amp;&amp; l3 &lt; l2) { //third interval lowest
+        intervals[0][0] = l3;
+        intervals[0][1] = r3;
+        m_left = l1;
+        m_right = r1;
+        if (l1 &lt; l2){
+            intervals[1][0] = l1;
+            intervals[1][1] = r1;
+            intervals[2][0] = l2;
+            intervals[2][1] = r2;
+        }
+        if (l2 &lt; l1){
+            intervals[1][0] = l2;
+            intervals[1][1] = r2;
+            intervals[2][0] = l1;
+            intervals[2][1] = r1;
+        }
+    }
+
+
+
+    m_intersections = 0;
+
+    for (j=1; j &lt; 3; j++) {
+        l = intervals[j][0];
+        r = intervals[j][1];
+        c_intersections = 0;
+
+        for (i=1; i &lt; 3; i++) {
+            if (intervals[i][0] &gt; r || intervals[i][1] &lt; l) {
+                //continue;
+            }
+            else {
+                c_intersections = c_intersections + 1;
+                if (intervals[i][0] &gt; l) {
+                    l = intervals[i][0];
+                }
+                //l = max(l, intervals[i][0]);
+                if (intervals[i][1] &lt; r) {
+                    r = intervals[i][1];
+                }
+                //r = min(r, intervals[i][1]);
+            }
+        }
+        if (c_intersections &gt; m_intersections){
+            m_intersections = c_intersections;
+            m_left = l;
+            m_right = r;
+        }
+    }
+    return (m_left + m_right)/2;
+}
+</declaration>
+	<template>
+		<name>HumiditySlidingWindow</name>
+		<location id="id0" x="-442" y="-246">
+			<committed/>
+		</location>
+		<location id="id1" x="-51" y="-467">
+			<committed/>
+		</location>
+		<location id="id2" x="-654" y="-569">
+			<committed/>
+		</location>
+		<location id="id3" x="-442" y="-467">
+		</location>
+		<init ref="id3"/>
+		<transition>
+			<source ref="id0"/>
+			<target ref="id3"/>
+			<nail x="-510" y="-340"/>
+		</transition>
+		<transition>
+			<source ref="id1"/>
+			<target ref="id3"/>
+			<nail x="-229" y="-408"/>
+		</transition>
+		<transition>
+			<source ref="id2"/>
+			<target ref="id3"/>
+			<nail x="-722" y="-484"/>
+		</transition>
+		<transition>
+			<source ref="id3"/>
+			<target ref="id0"/>
+			<label kind="guard" x="-433" y="-382">humSlidingWindow == 59</label>
+			<label kind="synchronisation" x="-433" y="-365">varalerts?</label>
+			<label kind="assignment" x="-433" y="-348">humSlidingWindow := (humSlidingWindow + 1) %60,
+lowerIdx := 59,
+upperIdx := humSlidingWindow + 1</label>
+		</transition>
+		<transition>
+			<source ref="id3"/>
+			<target ref="id1"/>
+			<label kind="guard" x="-365" y="-561">humSlidingWindow != 58 and humSlidingWindow != 59</label>
+			<label kind="synchronisation" x="-365" y="-544">varalerts?</label>
+			<label kind="assignment" x="-365" y="-527">humSlidingWindow := humSlidingWindow + 1,
+lowerIdx := humSlidingWindow -1,
+upperIdx := humSlidingWindow +1</label>
+		</transition>
+		<transition>
+			<source ref="id3"/>
+			<target ref="id2"/>
+			<label kind="guard" x="-630" y="-663">humSlidingWindow == 58</label>
+			<label kind="synchronisation" x="-629" y="-646">varalerts?</label>
+			<label kind="assignment" x="-629" y="-629">humSlidingWindow := humSlidingWindow + 1,
+lowerIdx := humSlidingWindow -1,
+upperIdx := 0</label>
+		</transition>
+	</template>
+	<template>
+		<name>HumFluxAlert</name>
+		<location id="id4" x="25" y="-161">
+		</location>
+		<location id="id5" x="25" y="-8">
+		</location>
+		<location id="id6" x="-246" y="-8">
+		</location>
+		<init ref="id6"/>
+		<transition>
+			<source ref="id5"/>
+			<target ref="id5"/>
+			<label kind="guard" x="85" y="102">humFluxSum &lt; humFluxPosRange and humSlidingWindow &gt;= 0 and humFluxSum &gt; humFluxNegRange</label>
+			<label kind="synchronisation" x="119" y="76">varalerts?</label>
+			<label kind="assignment" x="51" y="127">humFluxSum := humFluxSum + (HUMout - humArray[lowerIdx]) - (humArray[humSlidingWindow] - humArray[upperIdx]),
+humArray[humSlidingWindow] := HUMout</label>
+			<nail x="25" y="136"/>
+			<nail x="144" y="51"/>
+		</transition>
+		<transition>
+			<source ref="id5"/>
+			<target ref="id4"/>
+			<label kind="guard" x="25" y="-118">humFluxSum &gt;= humFluxPosRange or humFluxSum &lt;= humFluxNegRange</label>
+			<label kind="synchronisation" x="25" y="-101">varalerts?</label>
+			<label kind="assignment" x="25" y="-84">humAlert := 1</label>
+		</transition>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id5"/>
+			<label kind="synchronisation" x="-229" y="0">varalerts?</label>
+			<label kind="assignment" x="-263" y="17">humArray[humSlidingWindow] = HUMout</label>
+		</transition>
+	</template>
+	<template>
+		<name>SensorSampling</name>
+		<parameter>const id_t id</parameter>
+		<location id="id7" x="212" y="-85">
+			<name x="202" y="-119">Dead</name>
+		</location>
+		<location id="id8" x="-94" y="-93">
+			<name x="-104" y="-127">Alive</name>
+		</location>
+		<init ref="id8"/>
+		<transition>
+			<source ref="id8"/>
+			<target ref="id8"/>
+			<label kind="select" x="-442" y="-153">status : int[0,1],
+x : int[-1,1]</label>
+			<label kind="guard" x="-433" y="-102">status==1</label>
+			<label kind="synchronisation" x="-306" y="-110">sampling?</label>
+			<label kind="assignment" x="-442" y="-59">SLUX[id]=LUX+(LUX/10*x),
+TEMP[id]=temperature+(2*x*100),
+HUM[id]=humidity+(2*x*100),
+sensor_fail_alert[id]=0,
+sensor_consec_alert[id]=0</label>
+			<nail x="-187" y="-25"/>
+			<nail x="-187" y="-170"/>
+		</transition>
+		<transition>
+			<source ref="id7"/>
+			<target ref="id7"/>
+			<label kind="select" x="357" y="-161">status : int[0,1]</label>
+			<label kind="guard" x="356" y="-136">status==0</label>
+			<label kind="synchronisation" x="356" y="-110">sampling?</label>
+			<label kind="assignment" x="356" y="-85">SLUX[id]=-1,
+TEMP[id]=-1,
+HUM[id]=-1,
+sensor_fail_alert[id]=1,
+sensor_consec_alert[id]=sensor_consec_alert[id]+1</label>
+			<nail x="339" y="-161"/>
+			<nail x="339" y="-8"/>
+		</transition>
+		<transition>
+			<source ref="id7"/>
+			<target ref="id8"/>
+			<label kind="select" x="-59" y="-25">status : int[0,1],
+x : int[-1,1]</label>
+			<label kind="guard" x="-34" y="68">status==1</label>
+			<label kind="synchronisation" x="-34" y="42">sampling?</label>
+			<label kind="assignment" x="-42" y="102">SLUX[id]=LUX+(LUX/10*x),
+TEMP[id]=temperature+(2*x*100),
+HUM[id]=humidity+(2*x*100),
+sensor_fail_alert[id]=0,
+sensor_consec_alert[id]=0</label>
+			<nail x="59" y="-51"/>
+		</transition>
+		<transition>
+			<source ref="id8"/>
+			<target ref="id7"/>
+			<label kind="select" x="-42" y="-357">status : int[0,1]</label>
+			<label kind="guard" x="-42" y="-331">status==0</label>
+			<label kind="synchronisation" x="-42" y="-306">sampling?</label>
+			<label kind="assignment" x="-42" y="-280">SLUX[id]=-1,
+TEMP[id]=-1,
+HUM[id]=-1,
+sensor_fail_alert[id]=1,
+sensor_consec_alert[id]=sensor_consec_alert[id]+1</label>
+			<nail x="59" y="-153"/>
+		</transition>
+	</template>
+	<template>
+		<name>Temperature</name>
+		<location id="id9" x="-221" y="357">
+			<name x="-195" y="331">HardCool</name>
+		</location>
+		<location id="id10" x="-229" y="170">
+			<name x="-314" y="153">SoftCool</name>
+		</location>
+		<location id="id11" x="-229" y="-314">
+			<name x="-331" y="-314">HardHeat</name>
+		</location>
+		<location id="id12" x="-229" y="-161">
+			<name x="-314" y="-170">SoftHeat</name>
+		</location>
+		<location id="id13" x="-229" y="-25">
+			<name x="-306" y="-25">Standby</name>
+		</location>
+		<init ref="id13"/>
+		<transition>
+			<source ref="id9"/>
+			<target ref="id13"/>
+			<label kind="guard" x="433" y="170">soft_cool==0 &amp;&amp; hard_cool==0 &amp;&amp; soft_heat==0 &amp;&amp; hard_heat==0</label>
+			<label kind="synchronisation" x="433" y="144">envupdate?</label>
+			<label kind="assignment" x="433" y="195">temperature=temperature+((temperature/100))</label>
+			<nail x="391" y="357"/>
+			<nail x="391" y="-25"/>
+		</transition>
+		<transition>
+			<source ref="id11"/>
+			<target ref="id13"/>
+			<label kind="guard" x="442" y="-178">soft_cool==0 &amp;&amp; hard_cool==0 &amp;&amp; soft_heat==0 &amp;&amp; hard_heat==0</label>
+			<label kind="synchronisation" x="442" y="-204">envupdate?</label>
+			<label kind="assignment" x="442" y="-161">temperature=temperature+((temperature/100))</label>
+			<nail x="391" y="-314"/>
+			<nail x="391" y="-25"/>
+		</transition>
+		<transition>
+			<source ref="id13"/>
+			<target ref="id9"/>
+			<label kind="guard" x="-943" y="144">hard_cool==1 &amp;&amp; soft_cool == 1</label>
+			<label kind="synchronisation" x="-935" y="119">envupdate?</label>
+			<label kind="assignment" x="-1045" y="170">temperature=temperature - ((temperature/100))</label>
+			<nail x="-722" y="-25"/>
+			<nail x="-722" y="357"/>
+		</transition>
+		<transition>
+			<source ref="id13"/>
+			<target ref="id11"/>
+			<label kind="guard" x="-935" y="-263">hard_heat==1 &amp;&amp; soft_heat==1</label>
+			<label kind="synchronisation" x="-909" y="-289">envupdate?</label>
+			<label kind="assignment" x="-1079" y="-238">temperature=(1000-(temperature/100))+temperature</label>
+			<nail x="-722" y="-25"/>
+			<nail x="-722" y="-314"/>
+		</transition>
+		<transition>
+			<source ref="id13"/>
+			<target ref="id13"/>
+			<label kind="guard" x="-67" y="-25">soft_cool==0 &amp;&amp; hard_cool==0 &amp;&amp; soft_heat==0 &amp;&amp; hard_heat==0</label>
+			<label kind="synchronisation" x="-68" y="-8">envupdate?</label>
+			<label kind="assignment" x="-68" y="8">temperature=temperature+((temperature/100))</label>
+			<nail x="-76" y="34"/>
+			<nail x="-76" y="-25"/>
+		</transition>
+		<transition>
+			<source ref="id10"/>
+			<target ref="id10"/>
+			<label kind="guard" x="68" y="153">soft_cool==1 &amp;&amp; hard_cool==0</label>
+			<label kind="synchronisation" x="67" y="170">envupdate?</label>
+			<label kind="assignment" x="68" y="195">temperature=temperature - ((temperature/100))</label>
+			<nail x="59" y="153"/>
+			<nail x="59" y="213"/>
+		</transition>
+		<transition>
+			<source ref="id9"/>
+			<target ref="id9"/>
+			<label kind="guard" x="-340" y="442">soft_cool==1 &amp;&amp; hard_cool == 1</label>
+			<label kind="synchronisation" x="-374" y="416">envupdate?</label>
+			<label kind="assignment" x="-365" y="467">temperature=temperature - ((temperature/100))</label>
+			<nail x="-289" y="433"/>
+			<nail x="-212" y="433"/>
+		</transition>
+		<transition>
+			<source ref="id12"/>
+			<target ref="id12"/>
+			<label kind="guard" x="-42" y="-195">soft_heat==1 &amp;&amp; hard_heat==0</label>
+			<label kind="synchronisation" x="-42" y="-212">envupdate?</label>
+			<label kind="assignment" x="-51" y="-170">temperature=(500-(temperature/100))+temperature</label>
+			<nail x="-59" y="-144"/>
+			<nail x="-59" y="-195"/>
+		</transition>
+		<transition>
+			<source ref="id11"/>
+			<target ref="id11"/>
+			<label kind="guard" x="-323" y="-450">hard_heat == 1 &amp;&amp; soft_heat==1</label>
+			<label kind="synchronisation" x="-323" y="-484">envupdate?</label>
+			<label kind="assignment" x="-348" y="-467">temperature=(1000-(temperature/100))+temperature</label>
+			<nail x="-187" y="-424"/>
+			<nail x="-272" y="-424"/>
+		</transition>
+		<transition>
+			<source ref="id10"/>
+			<target ref="id13"/>
+			<label kind="guard" x="-136" y="93">soft_cool==0 &amp;&amp; hard_cool==0</label>
+			<label kind="synchronisation" x="-195" y="76">envupdate?</label>
+			<label kind="assignment" x="-161" y="110">temperature=temperature+((temperature/100))</label>
+			<nail x="-136" y="76"/>
+		</transition>
+		<transition>
+			<source ref="id9"/>
+			<target ref="id10"/>
+			<label kind="guard" x="-119" y="246">soft_cool==1 &amp;&amp; hard_cool==0</label>
+			<label kind="synchronisation" x="-110" y="221">envupdate?</label>
+			<label kind="assignment" x="-136" y="272">temperature=temperature - ((temperature/100))</label>
+			<nail x="-119" y="229"/>
+		</transition>
+		<transition>
+			<source ref="id10"/>
+			<target ref="id9"/>
+			<label kind="guard" x="-544" y="255">hard_cool==1 &amp;&amp; soft_cool == 1</label>
+			<label kind="synchronisation" x="-459" y="229">envupdate?</label>
+			<label kind="assignment" x="-603" y="280">temperature=temperature - ((temperature/100))</label>
+			<nail x="-331" y="238"/>
+		</transition>
+		<transition>
+			<source ref="id13"/>
+			<target ref="id10"/>
+			<label kind="guard" x="-510" y="8">soft_cool==1 &amp;&amp; hard_cool ==0</label>
+			<label kind="synchronisation" x="-306" y="59">envupdate?</label>
+			<label kind="assignment" x="-612" y="25">temperature=temperature - ((temperature/100))</label>
+			<nail x="-323" y="68"/>
+		</transition>
+		<transition>
+			<source ref="id12"/>
+			<target ref="id13"/>
+			<label kind="guard" x="-518" y="-127">soft_heat==0 &amp;&amp; hard_heat==0</label>
+			<label kind="synchronisation" x="-297" y="-102">envupdate?</label>
+			<label kind="assignment" x="-637" y="-102">temperature=temperature+((temperature/100))</label>
+			<nail x="-331" y="-93"/>
+		</transition>
+		<transition>
+			<source ref="id11"/>
+			<target ref="id12"/>
+			<label kind="guard" x="-527" y="-263">hard_heat==0 &amp;&amp; soft_heat==1</label>
+			<label kind="synchronisation" x="-459" y="-280">envupdate?</label>
+			<label kind="assignment" x="-637" y="-238">temperature=(500-(temperature/100))+temperature</label>
+			<nail x="-331" y="-238"/>
+		</transition>
+		<transition>
+			<source ref="id12"/>
+			<target ref="id11"/>
+			<label kind="guard" x="-161" y="-297">hard_heat==1 &amp;&amp; soft_heat==1</label>
+			<label kind="synchronisation" x="-110" y="-255">envupdate?</label>
+			<label kind="assignment" x="-119" y="-272">temperature=(1000-(temperature/100))+temperature</label>
+			<nail x="-110" y="-246"/>
+		</transition>
+		<transition>
+			<source ref="id13"/>
+			<target ref="id12"/>
+			<label kind="guard" x="-93" y="-110">soft_heat==1 &amp;&amp; hard_heat==0</label>
+			<label kind="synchronisation" x="-119" y="-127">envupdate?</label>
+			<label kind="assignment" x="-119" y="-85">temperature=(500-(temperature/100))+temperature</label>
+			<nail x="-110" y="-102"/>
+		</transition>
+	</template>
+	<template>
+		<name>Humidity</name>
+		<location id="id14" x="-229" y="-25">
+			<name x="-314" y="-34">Standby</name>
+		</location>
+		<location id="id15" x="-229" y="170">
+			<name x="-204" y="162">SoftDry</name>
+		</location>
+		<location id="id16" x="-221" y="357">
+			<name x="-246" y="314">HardDry</name>
+		</location>
+		<location id="id17" x="-229" y="-161">
+			<name x="-314" y="-170">SoftHum</name>
+		</location>
+		<location id="id18" x="-229" y="-314">
+			<name x="-323" y="-323">HardHum</name>
+		</location>
+		<init ref="id14"/>
+		<transition>
+			<source ref="id16"/>
+			<target ref="id14"/>
+			<label kind="guard" x="416" y="144">soft_dehum==0 &amp;&amp; hard_dehum==0 &amp;&amp; soft_hum==0 &amp;&amp; hard_hum==0</label>
+			<label kind="synchronisation" x="416" y="102">envupdate?</label>
+			<label kind="assignment" x="416" y="119">humidity=humidity+(humidity/50)</label>
+			<nail x="399" y="365"/>
+			<nail x="399" y="-25"/>
+		</transition>
+		<transition>
+			<source ref="id18"/>
+			<target ref="id14"/>
+			<label kind="guard" x="425" y="-195">soft_dehum==0 &amp;&amp; hard_dehum==0 &amp;&amp; soft_hum==0 &amp;&amp; hard_hum==0</label>
+			<label kind="synchronisation" x="425" y="-229">envupdate?</label>
+			<label kind="assignment" x="425" y="-212">humidity=humidity+(humidity/50)</label>
+			<nail x="399" y="-314"/>
+			<nail x="399" y="-25"/>
+		</transition>
+		<transition>
+			<source ref="id14"/>
+			<target ref="id16"/>
+			<label kind="guard" x="-977" y="136">soft_dehum==1 &amp;&amp; hard_dehum == 1</label>
+			<label kind="synchronisation" x="-901" y="119">envupdate?</label>
+			<label kind="assignment" x="-977" y="153">humidity=humidity-(humidity/50)</label>
+			<nail x="-714" y="-25"/>
+			<nail x="-714" y="357"/>
+		</transition>
+		<transition>
+			<source ref="id14"/>
+			<target ref="id18"/>
+			<label kind="guard" x="-935" y="-204">hard_hum==1 &amp;&amp; soft_hum==1</label>
+			<label kind="synchronisation" x="-867" y="-221">envupdate?</label>
+			<label kind="assignment" x="-943" y="-187">humidity=humidity+(humidity/50)</label>
+			<nail x="-714" y="-25"/>
+			<nail x="-714" y="-314"/>
+		</transition>
+		<transition>
+			<source ref="id14"/>
+			<target ref="id14"/>
+			<label kind="guard" x="-68" y="0">soft_dehum==0 &amp;&amp; hard_dehum==0 &amp;&amp; soft_hum==0 &amp;&amp; hard_hum==0</label>
+			<label kind="synchronisation" x="-68" y="-17">envupdate?</label>
+			<label kind="assignment" x="-68" y="17">humidity=humidity+(humidity/50)</label>
+			<nail x="-76" y="34"/>
+			<nail x="-76" y="-25"/>
+		</transition>
+		<transition>
+			<source ref="id15"/>
+			<target ref="id15"/>
+			<label kind="guard" x="-630" y="141">soft_dehum==1 &amp;&amp; hard_dehum==0</label>
+			<label kind="synchronisation" x="-569" y="119">envupdate?</label>
+			<label kind="assignment" x="-637" y="161">humidity=humidity-(humidity/100)</label>
+			<nail x="-383" y="132"/>
+			<nail x="-383" y="192"/>
+		</transition>
+		<transition>
+			<source ref="id16"/>
+			<target ref="id16"/>
+			<label kind="guard" x="-340" y="442">soft_dehum==1 &amp;&amp; hard_dehum == 1</label>
+			<label kind="synchronisation" x="-365" y="416">envupdate?</label>
+			<label kind="assignment" x="-365" y="467">humidity=humidity-(humidity/50)</label>
+			<nail x="-289" y="433"/>
+			<nail x="-212" y="433"/>
+		</transition>
+		<transition>
+			<source ref="id17"/>
+			<target ref="id17"/>
+			<label kind="guard" x="-42" y="-195">soft_hum==1 &amp;&amp; hard_hum==0</label>
+			<label kind="synchronisation" x="-42" y="-212">envupdate?</label>
+			<label kind="assignment" x="-51" y="-170">humidity=humidity+(humidity/100)</label>
+			<nail x="-59" y="-144"/>
+			<nail x="-59" y="-195"/>
+		</transition>
+		<transition>
+			<source ref="id18"/>
+			<target ref="id18"/>
+			<label kind="guard" x="-323" y="-450">hard_hum == 1 &amp;&amp; soft_hum==1</label>
+			<label kind="synchronisation" x="-365" y="-425">envupdate?</label>
+			<label kind="assignment" x="-348" y="-467">humidity=humidity+(humidity/50)</label>
+			<nail x="-187" y="-424"/>
+			<nail x="-272" y="-424"/>
+		</transition>
+		<transition>
+			<source ref="id15"/>
+			<target ref="id14"/>
+			<label kind="guard" x="-136" y="93">soft_dehum==0 &amp;&amp; hard_dehum==0</label>
+			<label kind="synchronisation" x="-119" y="76">envupdate?</label>
+			<label kind="assignment" x="-153" y="110">humidity=humidity+(humidity/50)</label>
+			<nail x="-136" y="76"/>
+		</transition>
+		<transition>
+			<source ref="id16"/>
+			<target ref="id15"/>
+			<label kind="guard" x="-127" y="255">soft_dehum==1 &amp;&amp; hard_dehum==0</label>
+			<label kind="synchronisation" x="-127" y="229">envupdate?</label>
+			<label kind="assignment" x="-136" y="272">humidity=humidity-(humidity/100)</label>
+			<nail x="-144" y="255"/>
+		</transition>
+		<transition>
+			<source ref="id15"/>
+			<target ref="id16"/>
+			<label kind="guard" x="-586" y="255">hard_dehum==1 &amp;&amp; soft_dehum == 1</label>
+			<label kind="synchronisation" x="-527" y="238">envupdate?</label>
+			<label kind="assignment" x="-578" y="272">humidity=humidity-(humidity/50)</label>
+			<nail x="-331" y="263"/>
+		</transition>
+		<transition>
+			<source ref="id14"/>
+			<target ref="id15"/>
+			<label kind="guard" x="-561" y="42">soft_dehum==1 &amp;&amp; hard_dehum ==0</label>
+			<label kind="synchronisation" x="-459" y="25">envupdate?</label>
+			<label kind="assignment" x="-544" y="59">humidity=humidity-(humidity/100)</label>
+			<nail x="-323" y="68"/>
+		</transition>
+		<transition>
+			<source ref="id17"/>
+			<target ref="id14"/>
+			<label kind="guard" x="-552" y="-110">soft_hum==0 &amp;&amp; hard_hum==0</label>
+			<label kind="synchronisation" x="-459" y="-127">envupdate?</label>
+			<label kind="assignment" x="-569" y="-93">humidity=humidity+(humidity/50)</label>
+			<nail x="-331" y="-93"/>
+		</transition>
+		<transition>
+			<source ref="id18"/>
+			<target ref="id17"/>
+			<label kind="guard" x="-544" y="-255">hard_hum==0 &amp;&amp; soft_hum==1</label>
+			<label kind="synchronisation" x="-459" y="-272">envupdate?</label>
+			<label kind="assignment" x="-552" y="-238">humidity=humidity+(humidity/100)</label>
+			<nail x="-331" y="-238"/>
+		</transition>
+		<transition>
+			<source ref="id17"/>
+			<target ref="id18"/>
+			<label kind="guard" x="-161" y="-297">hard_hum==1 &amp;&amp; soft_hum==1</label>
+			<label kind="synchronisation" x="-110" y="-255">envupdate?</label>
+			<label kind="assignment" x="-119" y="-272">humidity=humidity+(humidity/50)</label>
+			<nail x="-110" y="-246"/>
+		</transition>
+		<transition>
+			<source ref="id14"/>
+			<target ref="id17"/>
+			<label kind="guard" x="-93" y="-110">soft_hum==1 &amp;&amp; hard_hum==0</label>
+			<label kind="synchronisation" x="-102" y="-127">envupdate?</label>
+			<label kind="assignment" x="-119" y="-85">humidity=humidity+(humidity/100)</label>
+			<nail x="-110" y="-102"/>
+		</transition>
+	</template>
+	<template>
+		<name>LUX_current</name>
+		<location id="id19" x="68" y="-76">
+		</location>
+		<location id="id20" x="-153" y="-68">
+			<name x="-238" y="-76">Generator</name>
+		</location>
+		<init ref="id20"/>
+		<transition>
+			<source ref="id20"/>
+			<target ref="id19"/>
+			<label kind="guard" x="93" y="-102">LUX_limit==1</label>
+			<label kind="synchronisation" x="93" y="-76">envupdate?</label>
+			<label kind="assignment" x="110" y="-51">LUX=0</label>
+		</transition>
+		<transition>
+			<source ref="id20"/>
+			<target ref="id20"/>
+			<label kind="guard" x="-195" y="127">LUX_limit==0</label>
+			<label kind="synchronisation" x="-187" y="161">envupdate?</label>
+			<label kind="assignment" x="-212" y="144">LUX = LUX-LUX/100</label>
+			<nail x="-229" y="110"/>
+			<nail x="-85" y="110"/>
+		</transition>
+		<transition>
+			<source ref="id20"/>
+			<target ref="id20"/>
+			<label kind="guard" x="-195" y="-314">LUX_limit==0</label>
+			<label kind="synchronisation" x="-195" y="-331">envupdate?</label>
+			<label kind="assignment" x="-204" y="-297">LUX = LUX+LUX/20</label>
+			<nail x="-59" y="-255"/>
+			<nail x="-238" y="-255"/>
+		</transition>
+	</template>
+	<template>
+		<name>SequentialGen</name>
+		<location id="id21" x="-314" y="-42">
+		</location>
+		<location id="id22" x="-170" y="51">
+		</location>
+		<location id="id23" x="-34" y="-34">
+		</location>
+		<location id="id24" x="-93" y="-136">
+		</location>
+		<location id="id25" x="-246" y="-136">
+		</location>
+		<init ref="id25"/>
+		<transition>
+			<source ref="id24"/>
+			<target ref="id23"/>
+			<label kind="synchronisation" x="-59" y="-110">fusion!</label>
+		</transition>
+		<transition>
+			<source ref="id25"/>
+			<target ref="id24"/>
+			<label kind="synchronisation" x="-204" y="-161">sampling!</label>
+		</transition>
+		<transition>
+			<source ref="id21"/>
+			<target ref="id25"/>
+			<label kind="synchronisation" x="-365" y="-102">envupdate!</label>
+		</transition>
+		<transition>
+			<source ref="id22"/>
+			<target ref="id21"/>
+			<label kind="synchronisation" x="-297" y="25">envcontrol!</label>
+		</transition>
+		<transition>
+			<source ref="id23"/>
+			<target ref="id22"/>
+			<label kind="synchronisation" x="-102" y="17">varalerts!</label>
+		</transition>
+	</template>
+	<template>
+		<name>Fusion</name>
+		<location id="id26" x="85" y="-34">
+			<name x="119" y="-42">Fusion</name>
+		</location>
+		<init ref="id26"/>
+		<transition>
+			<source ref="id26"/>
+			<target ref="id26"/>
+			<label kind="guard" x="314" y="-85">sensor_fail_alert[0]==0 || sensor_fail_alert[1]==0 || sensor_fail_alert[2]==0</label>
+			<label kind="synchronisation" x="323" y="-153">fusion?</label>
+			<label kind="assignment" x="323" y="-42">TEMPout = marzulloAlgorithm(TEMP[0],TEMP[1],TEMP[2], 1),
+HUMout = marzulloAlgorithm(HUM[0],HUM[1],HUM[2], 2),
+LUXout = marzulloAlgorithm(SLUX[0],SLUX[1],SLUX[2], 3)</label>
+			<nail x="289" y="-110"/>
+			<nail x="289" y="59"/>
+		</transition>
+	</template>
+	<template>
+		<name>Temperature_Action</name>
+		<location id="id27" x="357" y="195">
+			<name x="347" y="161">SoftHeating</name>
+		</location>
+		<location id="id28" x="-374" y="195">
+			<name x="-384" y="161">HardHeating</name>
+		</location>
+		<location id="id29" x="357" y="-161">
+			<name x="347" y="-195">SoftCooling</name>
+		</location>
+		<location id="id30" x="-374" y="-153">
+			<name x="-384" y="-187">HardCooling</name>
+		</location>
+		<location id="id31" x="0" y="0">
+		</location>
+		<init ref="id31"/>
+		<transition>
+			<source ref="id27"/>
+			<target ref="id27"/>
+			<label kind="guard" x="450" y="170">TEMPout + 200 &gt; hard_heat_bound and TEMPout - 200 &lt; soft_heat_bound</label>
+			<label kind="synchronisation" x="434" y="191">envcontrol?</label>
+			<label kind="assignment" x="484" y="187">soft_heat :=1 , hard_heat:=0</label>
+			<nail x="434" y="255"/>
+			<nail x="434" y="144"/>
+		</transition>
+		<transition>
+			<source ref="id28"/>
+			<target ref="id28"/>
+			<label kind="guard" x="-714" y="153">TEMPout - 200 &lt;= hard_heat_bound</label>
+			<label kind="synchronisation" x="-646" y="178">envcontrol?</label>
+			<label kind="assignment" x="-654" y="204">hard_heat :=1, soft_heat:=1</label>
+			<nail x="-450" y="263"/>
+			<nail x="-450" y="153"/>
+			<nail x="-450" y="153"/>
+		</transition>
+		<transition>
+			<source ref="id28"/>
+			<target ref="id27"/>
+			<label kind="guard" x="-161" y="255">TEMPout + 200 &gt; hard_heat_bound and TEMPout - 200 &lt; soft_heat_bound</label>
+			<label kind="synchronisation" x="-161" y="272">envcontrol?</label>
+			<label kind="assignment" x="-110" y="272">hard_heat :=0, soft_heat :=1</label>
+			<nail x="8" y="255"/>
+		</transition>
+		<transition>
+			<source ref="id27"/>
+			<target ref="id28"/>
+			<label kind="guard" x="-136" y="178">TEMPout - 200 &lt;= hard_heat_bound</label>
+			<label kind="synchronisation" x="-144" y="195">envcontrol?</label>
+			<label kind="assignment" x="-93" y="195">hard_heat :=1, soft_heat :=1</label>
+		</transition>
+		<transition>
+			<source ref="id30"/>
+			<target ref="id31"/>
+			<label kind="guard" x="-323" y="-42">TEMPout - 200 &lt; soft_cooling_bound</label>
+			<label kind="synchronisation" x="-425" y="-25">envcontrol?</label>
+			<label kind="assignment" x="-306" y="-17">hard_cool :=0, soft_cool :=0</label>
+			<nail x="-374" y="0"/>
+		</transition>
+		<transition>
+			<source ref="id27"/>
+			<target ref="id31"/>
+			<label kind="guard" x="17" y="8">TEMPout + 200 &gt; soft_heat_bound</label>
+			<label kind="synchronisation" x="17" y="25">envcontrol?</label>
+			<label kind="assignment" x="59" y="25">soft_heat :=0, hard_heat :=0</label>
+			<nail x="357" y="0"/>
+		</transition>
+		<transition>
+			<source ref="id28"/>
+			<target ref="id31"/>
+			<label kind="guard" x="-314" y="8">TEMPout + 200 &gt; soft_heat_bound</label>
+			<label kind="synchronisation" x="-408" y="25">envcontrol?</label>
+			<label kind="assignment" x="-314" y="25">soft_heat := 0, hard_heat := 0</label>
+			<nail x="-374" y="0"/>
+		</transition>
+		<transition>
+			<source ref="id31"/>
+			<target ref="id27"/>
+			<label kind="guard" x="51" y="119">TEMPout + 200 &gt; hard_heat_bound and TEMPout - 200 &lt; soft_heat_bound</label>
+			<label kind="synchronisation" x="42" y="144">envcontrol?</label>
+			<label kind="assignment" x="93" y="144">soft_heat := 1, hard_heat :=0</label>
+			<nail x="0" y="144"/>
+		</transition>
+		<transition>
+			<source ref="id31"/>
+			<target ref="id28"/>
+			<label kind="guard" x="-238" y="119">TEMPout - 200 &lt;= hard_heat_bound</label>
+			<label kind="synchronisation" x="-238" y="136">envcontrol?</label>
+			<label kind="assignment" x="-195" y="136">hard_heat :=1, soft_heat :=1</label>
+			<nail x="0" y="144"/>
+		</transition>
+		<transition>
+			<source ref="id30"/>
+			<target ref="id30"/>
+			<label kind="guard" x="-739" y="-229">TEMPout + 200 &gt;= hard_cooling_bound</label>
+			<label kind="synchronisation" x="-705" y="-195">envcontrol?</label>
+			<label kind="assignment" x="-705" y="-170">hard_cool :=1 , soft_cool :=1</label>
+			<nail x="-459" y="-229"/>
+			<nail x="-459" y="-110"/>
+			<nail x="-459" y="-110"/>
+		</transition>
+		<transition>
+			<source ref="id29"/>
+			<target ref="id29"/>
+			<label kind="guard" x="365" y="-263">TEMPout + 200 &gt;= soft_cooling_bound and TEMPout - 200 &lt; hard_cooling_bound</label>
+			<label kind="synchronisation" x="314" y="-238">envcontrol?</label>
+			<label kind="assignment" x="459" y="-238">soft_cool :=1, hard_cool :=0</label>
+			<nail x="442" y="-238"/>
+			<nail x="442" y="-119"/>
+		</transition>
+		<transition>
+			<source ref="id29"/>
+			<target ref="id30"/>
+			<label kind="guard" x="-93" y="-272">TEMPout + 200 &gt;= hard_cooling_bound</label>
+			<label kind="synchronisation" x="-93" y="-255">envcontrol?</label>
+			<label kind="assignment" x="-42" y="-255">hard_cool :=1, soft_cool :=1</label>
+			<nail x="0" y="-238"/>
+		</transition>
+		<transition>
+			<source ref="id30"/>
+			<target ref="id29"/>
+			<label kind="guard" x="-229" y="-187">TEMPout + 200 &gt;= soft_cooling_bound and TEMPout - 200 &lt; hard_cooling_bound</label>
+			<label kind="synchronisation" x="-221" y="-178">envcontrol?</label>
+			<label kind="assignment" x="-178" y="-178">soft_cool :=1, hard_cool:=0</label>
+		</transition>
+		<transition>
+			<source ref="id29"/>
+			<target ref="id31"/>
+			<label kind="guard" x="17" y="-34">TEMPout - 200 &lt; soft_cooling_bound</label>
+			<label kind="synchronisation" x="18" y="-17">envcontrol?</label>
+			<label kind="assignment" x="68" y="-17">hard_cool :=0, soft_cool :=0</label>
+			<nail x="357" y="0"/>
+		</transition>
+		<transition>
+			<source ref="id31"/>
+			<target ref="id29"/>
+			<label kind="guard" x="-9" y="-136">TEMPout + 200 &gt;= soft_cooling_bound and TEMPout - 200 &lt; hard_cooling_bound</label>
+			<label kind="synchronisation" x="-17" y="-110">envcontrol?</label>
+			<label kind="assignment" x="34" y="-85">soft_cool :=1, hard_cool :=0</label>
+			<nail x="0" y="-76"/>
+		</transition>
+		<transition>
+			<source ref="id31"/>
+			<target ref="id30"/>
+			<label kind="guard" x="-289" y="-144">TEMPout + 200 &gt;= hard_cooling_bound</label>
+			<label kind="synchronisation" x="-314" y="-119">envcontrol?</label>
+			<label kind="assignment" x="-314" y="-93">hard_cool :=1, soft_cool :=1</label>
+			<nail x="0" y="-76"/>
+			<nail x="0" y="-76"/>
+		</transition>
+	</template>
+	<template>
+		<name>Humidity_Action</name>
+		<location id="id32" x="357" y="195">
+			<name x="280" y="221">SoftHumidify</name>
+		</location>
+		<location id="id33" x="-374" y="195">
+			<name x="-382" y="212">HardHumidify</name>
+		</location>
+		<location id="id34" x="-374" y="-153">
+			<name x="-382" y="-204">HardDehumidify</name>
+		</location>
+		<location id="id35" x="0" y="0">
+			<name x="-25" y="-25">StandBy</name>
+		</location>
+		<location id="id36" x="357" y="-161">
+			<name x="255" y="-212">SoftDehumidify</name>
+		</location>
+		<init ref="id35"/>
+		<transition>
+			<source ref="id32"/>
+			<target ref="id32"/>
+			<label kind="guard" x="450" y="153">HUMout -200 &lt;= soft_hum_bound and HUMout + 200 &gt; hard_hum_bound</label>
+			<label kind="synchronisation" x="450" y="204">envcontrol?</label>
+			<label kind="assignment" x="450" y="178">soft_hum :=1 , hard_hum:=0</label>
+			<nail x="434" y="255"/>
+			<nail x="434" y="144"/>
+		</transition>
+		<transition>
+			<source ref="id33"/>
+			<target ref="id33"/>
+			<label kind="guard" x="-663" y="144">HUMout - 200 &lt;= hard_hum_bound</label>
+			<label kind="synchronisation" x="-663" y="170">envcontrol?</label>
+			<label kind="assignment" x="-663" y="195">hard_hum :=1, soft_hum:=1</label>
+			<nail x="-450" y="263"/>
+			<nail x="-450" y="153"/>
+			<nail x="-450" y="153"/>
+		</transition>
+		<transition>
+			<source ref="id33"/>
+			<target ref="id32"/>
+			<label kind="guard" x="-161" y="280">HUMout -200 &lt;= soft_hum_bound and HUMout + 200 &gt; hard_hum_bound</label>
+			<label kind="synchronisation" x="-161" y="331">envcontrol?</label>
+			<label kind="assignment" x="-161" y="306">hard_hum :=1, soft_hum :=1</label>
+			<nail x="8" y="255"/>
+		</transition>
+		<transition>
+			<source ref="id32"/>
+			<target ref="id33"/>
+			<label kind="guard" x="-119" y="170">HUMout - 200 &lt;= hard_hum_bound</label>
+			<label kind="synchronisation" x="-68" y="212">envcontrol?</label>
+			<label kind="assignment" x="-93" y="195">hard_hum :=1, soft_hum :=0</label>
+		</transition>
+		<transition>
+			<source ref="id34"/>
+			<target ref="id35"/>
+			<label kind="guard" x="-357" y="-34">HUMout -200 &lt; soft_dehum_bound</label>
+			<label kind="synchronisation" x="-357" y="-51">envcontrol?</label>
+			<label kind="assignment" x="-306" y="-17">hard_dehum :=0, soft_dehum :=0</label>
+			<nail x="-374" y="0"/>
+		</transition>
+		<transition>
+			<source ref="id32"/>
+			<target ref="id35"/>
+			<label kind="guard" x="17" y="8">HUMout + 200 &gt; soft_hum_bound</label>
+			<label kind="synchronisation" x="17" y="42">envcontrol?</label>
+			<label kind="assignment" x="59" y="25">soft_hum :=0, hard_hum :=0</label>
+			<nail x="357" y="0"/>
+		</transition>
+		<transition>
+			<source ref="id33"/>
+			<target ref="id35"/>
+			<label kind="guard" x="-356" y="8">HUMout + 200 &gt; soft_hum_bound</label>
+			<label kind="synchronisation" x="-357" y="51">envcontrol?</label>
+			<label kind="assignment" x="-314" y="25">soft_hum := 0, hard_hum := 0</label>
+			<nail x="-374" y="0"/>
+		</transition>
+		<transition>
+			<source ref="id35"/>
+			<target ref="id32"/>
+			<label kind="guard" x="34" y="127">HUMout -200 &lt;= soft_hum_bound and HUMout + 200 &gt; hard_hum_bound</label>
+			<label kind="synchronisation" x="25" y="102">envcontrol?</label>
+			<label kind="assignment" x="93" y="144">soft_hum := 1, hard_hum :=0</label>
+			<nail x="0" y="144"/>
+		</transition>
+		<transition>
+			<source ref="id35"/>
+			<target ref="id33"/>
+			<label kind="guard" x="-280" y="119">HUMout - 200 &lt;= hard_hum_bound</label>
+			<label kind="synchronisation" x="-280" y="102">envcontrol?</label>
+			<label kind="assignment" x="-280" y="136">hard_hum :=1, soft_hum :=1</label>
+			<nail x="0" y="144"/>
+		</transition>
+		<transition>
+			<source ref="id34"/>
+			<target ref="id34"/>
+			<label kind="guard" x="-688" y="-221">HUMout + 200 &gt;= hard_dehum_bound</label>
+			<label kind="synchronisation" x="-688" y="-195">envcontrol?</label>
+			<label kind="assignment" x="-697" y="-170">hard_dehum :=1 , soft_dehum :=1</label>
+			<nail x="-459" y="-229"/>
+			<nail x="-459" y="-110"/>
+			<nail x="-459" y="-110"/>
+		</transition>
+		<transition>
+			<source ref="id36"/>
+			<target ref="id36"/>
+			<label kind="guard" x="450" y="-255">HUMout + 200 &gt;= soft_dehum_bound and HUMout - 200 &lt; hard_dehum_bound</label>
+			<label kind="synchronisation" x="467" y="-204">envcontrol?</label>
+			<label kind="assignment" x="459" y="-229">soft_dehum :=1, hard_dehum :=0</label>
+			<nail x="442" y="-238"/>
+			<nail x="442" y="-119"/>
+		</transition>
+		<transition>
+			<source ref="id36"/>
+			<target ref="id34"/>
+			<label kind="guard" x="-93" y="-272">HUMout + 200 &gt;= hard_dehum_bound</label>
+			<label kind="synchronisation" x="-136" y="-246">envcontrol?</label>
+			<label kind="assignment" x="-42" y="-255">hard_dehum :=1, soft_dehum :=1</label>
+			<nail x="0" y="-238"/>
+		</transition>
+		<transition>
+			<source ref="id34"/>
+			<target ref="id36"/>
+			<label kind="guard" x="-229" y="-187">HUMout + 200 &gt;= soft_dehum_bound and HUMout - 200 &lt; hard_dehum_bound</label>
+			<label kind="synchronisation" x="-263" y="-170">envcontrol?</label>
+			<label kind="assignment" x="-178" y="-178">soft_dehum :=1, hard_dehum:=0</label>
+		</transition>
+		<transition>
+			<source ref="id36"/>
+			<target ref="id35"/>
+			<label kind="guard" x="17" y="-34">HUMout -200 &lt; soft_dehum_bound</label>
+			<label kind="synchronisation" x="25" y="-51">envcontrol?</label>
+			<label kind="assignment" x="68" y="-17">hard_dehum :=0, soft_dehum :=0</label>
+			<nail x="357" y="0"/>
+		</transition>
+		<transition>
+			<source ref="id35"/>
+			<target ref="id36"/>
+			<label kind="guard" x="-9" y="-136">HUMout + 200 &gt;= soft_dehum_bound and HUMout - 200 &lt; hard_dehum_bound</label>
+			<label kind="synchronisation" x="-34" y="-110">envcontrol?</label>
+			<label kind="assignment" x="42" y="-119">soft_dehum :=1, hard_dehum :=0</label>
+			<nail x="0" y="-76"/>
+		</transition>
+		<transition>
+			<source ref="id35"/>
+			<target ref="id34"/>
+			<label kind="guard" x="-289" y="-144">HUMout + 200 &gt;= hard_dehum_bound</label>
+			<label kind="synchronisation" x="-314" y="-110">envcontrol?</label>
+			<label kind="assignment" x="-238" y="-127">hard_dehum :=1, soft_dehum :=1</label>
+			<nail x="0" y="-76"/>
+			<nail x="0" y="-76"/>
+		</transition>
+	</template>
+	<template>
+		<name>LUXLimit_Action</name>
+		<location id="id37" x="102" y="-263">
+			<name x="102" y="-306">OverLimit</name>
+		</location>
+		<location id="id38" x="-468" y="-263">
+			<name x="-459" y="-297">StandBy</name>
+		</location>
+		<init ref="id38"/>
+		<transition>
+			<source ref="id38"/>
+			<target ref="id38"/>
+			<label kind="guard" x="-824" y="-238">CurrentTime == counter</label>
+			<label kind="synchronisation" x="-816" y="-263">envcontrol?</label>
+			<label kind="assignment" x="-816" y="-212">CurrentTime := 0,
+LUX_limit := 0,
+LuxSum = 0</label>
+			<nail x="-637" y="-263"/>
+			<nail x="-637" y="-136"/>
+		</transition>
+		<transition>
+			<source ref="id37"/>
+			<target ref="id37"/>
+			<label kind="guard" x="212" y="-280">CurrentTime &lt; counter</label>
+			<label kind="synchronisation" x="212" y="-212">envcontrol?</label>
+			<label kind="assignment" x="212" y="-255">LUX_limit := 1,
+CurrentTime := CurrentTime + 1</label>
+			<nail x="187" y="-263"/>
+			<nail x="187" y="-187"/>
+		</transition>
+		<transition>
+			<source ref="id37"/>
+			<target ref="id38"/>
+			<label kind="guard" x="-306" y="-178">CurrentTime == counter</label>
+			<label kind="synchronisation" x="-304" y="-161">envcontrol?</label>
+			<label kind="assignment" x="-304" y="-144">CurrentTime := 0,
+LUX_limit := 0,
+LuxSum = 0</label>
+			<nail x="102" y="-187"/>
+			<nail x="-204" y="-187"/>
+			<nail x="-450" y="-187"/>
+		</transition>
+		<transition>
+			<source ref="id38"/>
+			<target ref="id38"/>
+			<label kind="guard" x="-714" y="-501">(LUXout + LUXout/10) &lt; LUXLimBound &amp; CurrentTime &lt; counter</label>
+			<label kind="synchronisation" x="-714" y="-518">envcontrol?</label>
+			<label kind="assignment" x="-714" y="-484">LUX_limit :=0,
+LuxSum := LuxSum + (LUXout + LUXout/10)/10,
+CurrentTime := (CurrentTime +1) % (counter+1)</label>
+			<nail x="-629" y="-408"/>
+			<nail x="-467" y="-408"/>
+		</transition>
+		<transition>
+			<source ref="id38"/>
+			<target ref="id37"/>
+			<label kind="guard" x="-416" y="-365">((LUXout + LUXout/10) &gt;= LUXLimBound or LuxSum &gt; Luxmin) &amp; CurrentTime &lt; counter</label>
+			<label kind="synchronisation" x="-408" y="-348">envcontrol?</label>
+			<label kind="assignment" x="-323" y="-340">LUX_limit:=1,
+CurrentTime := CurrentTime + 1</label>
+		</transition>
+	</template>
+	<template>
+		<name>SensorConsecAlerts</name>
+		<parameter>const id_t id</parameter>
+		<location id="id39" x="-42" y="0">
+			<name x="-34" y="-42">YesAlert</name>
+		</location>
+		<location id="id40" x="-391" y="0">
+			<name x="-450" y="-42">NoAlert</name>
+		</location>
+		<init ref="id40"/>
+		<transition>
+			<source ref="id39"/>
+			<target ref="id39"/>
+			<label kind="guard" x="-8" y="59">sensor_consec_alert[id]&gt;=3</label>
+			<label kind="synchronisation" x="34" y="25">varalerts?</label>
+			<label kind="assignment" x="8" y="42">sensor_offline[id]=1</label>
+			<nail x="59" y="0"/>
+			<nail x="-42" y="76"/>
+		</transition>
+		<transition>
+			<source ref="id40"/>
+			<target ref="id40"/>
+			<label kind="guard" x="-671" y="17">sensor_consec_alert[id]&lt;3</label>
+			<label kind="synchronisation" x="-612" y="0">varalerts?</label>
+			<label kind="assignment" x="-646" y="34">sensor_offline[id]=0</label>
+			<nail x="-476" y="68"/>
+			<nail x="-476" y="0"/>
+		</transition>
+		<transition>
+			<source ref="id39"/>
+			<target ref="id40"/>
+			<label kind="guard" x="-323" y="85">sensor_consec_alert[id]&lt;3</label>
+			<label kind="synchronisation" x="-255" y="68">varalerts?</label>
+			<label kind="assignment" x="-297" y="102">sensor_offline[id]=0</label>
+			<nail x="-221" y="68"/>
+		</transition>
+		<transition>
+			<source ref="id40"/>
+			<target ref="id39"/>
+			<label kind="guard" x="-306" y="-119">sensor_consec_alert[id]&gt;=3</label>
+			<label kind="synchronisation" x="-255" y="-102">varalerts?</label>
+			<label kind="assignment" x="-289" y="-136">sensor_offline[id]=1</label>
+			<nail x="-221" y="-76"/>
+		</transition>
+	</template>
+	<system>// List one or more processes to be composed into a system.
+system SequentialGen, SensorSampling, Fusion, HumFluxAlert, HumiditySlidingWindow, SensorConsecAlerts, Temperature_Action, Humidity_Action, LUXLimit_Action, Temperature, Humidity, LUX_current;
+  </system>
+	<queries>
+		<query>
+			<formula>E&lt;&gt; LuxSum &gt;= 6000 &amp;&amp; LUX_limit == 1
+			</formula>
+			<comment>Set LuxSum = 6000
+			</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; LUXout &gt;= 2000 &amp;&amp; LUX_limit == 1
+			</formula>
+			<comment>int temperature=21000, humidity=4500, LUX=2000; //perfect temperature and perfect humidity and increased LUX
+			</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; (humFluxSum &gt;= 10000 || humFluxSum &lt;= -10000) &amp;&amp; humAlert == 1
+			</formula>
+			<comment>int humFluxSum = 15000 or int humFluxSum = -15000;
+			</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; HUMout &gt;= 5600 &amp;&amp; soft_dehum == 1 &amp;&amp; hard_dehum==1
+			</formula>
+			<comment>int temperature=23000, humidity=6000, LUX=1000; //high temperature and high humidity
+			</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; HUMout &lt;= 3400 &amp;&amp; soft_hum == 1 &amp;&amp; hard_hum == 1
+			</formula>
+			<comment>int temperature=21000, humidity=4500, LUX=2000; //perfect temperature and perfect humidity
+			</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; HUMout &gt;= 5100 &amp;&amp; soft_dehum == 1
+			</formula>
+			<comment>int temperature=23000, humidity=6000, LUX=1000; //high temperature and high humidity
+			</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; HUMout &lt;= 3900 &amp;&amp; soft_hum == 1
+			</formula>
+			<comment>int temperature=21000, humidity=4500, LUX=2000; //perfect temperature and perfect humidity
+			</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; TEMPout &gt;= 22100 &amp;&amp; soft_cool == 1 &amp;&amp; hard_cool == 1
+			</formula>
+			<comment>int temperature=21000, humidity=4500, LUX=2000; //perfect temperature and perfect humidity
+			</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; TEMPout &lt;= 19900 &amp;&amp; soft_heat == 1 &amp;&amp; hard_heat== 1
+			</formula>
+			<comment>int temperature=21000, humidity=4500, LUX=2000; //perfect temperature and perfect humidity
+			</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; TEMPout &gt;= 21600 &amp;&amp; soft_cool == 1
+			</formula>
+			<comment>int temperature=21000, humidity=4500, LUX=2000; //perfect temperature and perfect humidity
+			</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; TEMPout &lt;= 20400 &amp;&amp; soft_heat == 1
+			</formula>
+			<comment>int temperature=21000, humidity=4500, LUX=2000; //perfect temperature and perfect humidity
+			</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; TEMP[0] == -1 || TEMP[1] == -1 || TEMP[2] == -1 ||
+HUM[0] == -1 || HUM[1] == -1 || HUM[2] == -1 ||
+SLUX[0] == -1 || SLUX[1] == -1 || SLUX[2] == -1 
+&amp;&amp; LUXout &gt; 0 &amp;&amp; TEMPout &gt; 0 &amp;&amp; HUMout &gt; 0
+			</formula>
+			<comment>int temperature=21000, humidity=4500, LUX=2000; //perfect temperature and perfect humidity
+			</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; (sensor_offline[0] ==1 &amp;&amp; sensor_offline[1] == 1) || (sensor_offline[0] ==1 &amp;&amp; sensor_offline[2] == 1)|| 
+(sensor_offline[1] ==1 &amp;&amp; sensor_offline[2] == 1) &amp;&amp; LUXout &gt; 0 &amp;&amp; TEMPout &gt; 0 &amp;&amp; HUMout &gt; 0
+			</formula>
+			<comment>int temperature=21000, humidity=4500, LUX=2000; //perfect temperature and perfect humidity
+			</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; (sensor_fail_alert[0] ==1 &amp;&amp; sensor_fail_alert[1] == 1) || (sensor_fail_alert[0] ==1 &amp;&amp; sensor_fail_alert[2] == 1)|| 
+(sensor_fail_alert[1] ==1 &amp;&amp; sensor_fail_alert[2] == 1) &amp;&amp; LUXout &gt; 0 &amp;&amp; TEMPout &gt; 0 &amp;&amp; HUMout &gt; 0
+			</formula>
+			<comment>int temperature=21000, humidity=4500, LUX=2000; //perfect temperature and perfect humidity
+			</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; (sensor_offline[0] ==1 &amp;&amp; LUXout &gt; 0 &amp;&amp; TEMPout &gt; 0 &amp;&amp; HUMout &gt; 0)|| 
+(sensor_offline[1] ==1 &amp;&amp; LUXout &gt; 0 &amp;&amp; TEMPout &gt; 0 &amp;&amp; HUMout &gt; 0) || 
+(sensor_offline[2] ==1 &amp;&amp; LUXout &gt; 0 &amp;&amp; TEMPout &gt; 0 &amp;&amp; HUMout &gt; 0)
+			</formula>
+			<comment>int temperature=21000, humidity=4500, LUX=2000; //perfect temperature and perfect humidity
+			</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; (sensor_fail_alert[0] == 1 &amp;&amp; LUXout &gt; 0 &amp;&amp; TEMPout &gt; 0 &amp;&amp; HUMout &gt; 0) ||  
+(sensor_fail_alert[1] == 1 &amp;&amp; LUXout &gt; 0 &amp;&amp; TEMPout &gt; 0 &amp;&amp; HUMout &gt; 0) || 
+(sensor_fail_alert[2] == 1 &amp;&amp; LUXout &gt; 0 &amp;&amp; TEMPout &gt; 0 &amp;&amp; HUMout &gt; 0)
+			</formula>
+			<comment>int temperature=21000, humidity=4500, LUX=2000; //perfect temperature and perfect humidity
+			</comment>
+		</query>
+	</queries>
+</nta>
